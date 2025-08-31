@@ -1,5 +1,9 @@
 # 極速記帳 PWA v3.3（餐廳＋個人 JACK/WAL）
 
+📸 系統預覽  
+![預覽畫面](docs/screens/input.jpeg)
+
+
 ## 系統架構
 - 前端：Vue 3 + LocalForage (IndexedDB 本機資料庫)
 - 報表：Chart.js（圓餅 / 折線 / P&L 長條）
@@ -81,3 +85,17 @@ A：GitHub Pages 只能讀，不能直接寫。請先在「設定」下載 JSON�
 1. 將所有檔案放到 GitHub repo 根目錄（含 `.nojekyll`）
 2. 在 repo Settings → Pages 啟用 GitHub Pages
 3. 透過 `https://<username>.github.io/cashflow/` 開啟；若遇到舊版快取，用 `?v=13` 強制刷新
+
+## 操作截圖
+
+### 記帳頁面
+![記帳頁面](docs/screens/input.jpeg)
+
+### 轉帳頁面
+![轉帳頁面](docs/screens/transfer.jpeg)
+
+### 報表頁面
+![報表頁面](docs/screens/report.jpeg)
+
+### 設定頁面
+![設定頁面](docs/screens/settings1.jpeg)
