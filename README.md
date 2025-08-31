@@ -1,5 +1,5 @@
 [README.md](https://github.com/user-attachments/files/22067362/README.md)
-# 極速記帳 PWA v3.3（餐廳＋個人 JACK/WAL）
+# 極速記帳 PWA v3.3（餐廳＋個人）
 
 ## 系統架構
 - 前端：Vue 3 + LocalForage (瀏覽器 IndexedDB)
@@ -19,6 +19,19 @@
 8. CSV 匯出/匯入（支援合併更新）
 9. 多裝置同步（JSON 匯出/匯入）
 10. PWA 安裝，支援手機離線使用
+
+## 📌 快速開始 (Quick Start)
+1. 進入 [GitHub Pages 網址](https://username.github.io/repo/)  
+2. 首次開啟時，系統會自動建立本機資料庫
+3. **安裝 PWA**  
+   - 在手機 Safari：分享 → 加到主畫面  
+   - 在手機 Chrome：右上選單 → 安裝應用程式  
+4. **更新到最新版**  
+   - 在網址後面加 `?v=數字` 強制刷新，例如：  
+     ```
+     https://username.github.io/repo/?v=5
+     ```
+   - 或到瀏覽器設定 → 清除快取/網站資料，再重新載入
 
 ## 操作手冊
 - **記帳**：選擇帳戶（餐廳/JACK/WAL）、輸入金額與分類，按「記錄」即可
