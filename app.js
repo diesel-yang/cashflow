@@ -18,6 +18,8 @@ const DEFAULT_PL_MAP = {};
 
 function uuid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(0,8)}
 
+function deepPlain(obj){return JSON.parse(JSON.stringify(obj));}
+
 createApp({
   setup(){
     const version = ref("極速記帳 v3.3 fixed build " + new Date().toISOString().slice(0,10));
@@ -495,7 +497,7 @@ createApp({
       }
     }
 
-    async function saveSettings(){ await settingsStore.setItem('settings', settings.value); toast('設定已儲存'); }
+    async function saveSettings(){ const plain = deepPlain(settings.value); await settingsStore.setItem('settings', plain); toast('設定已儲存'); }
 
     // Charts
     let pieChart = null, lineChart = null, plBarChart = null;
