@@ -1,5 +1,4 @@
-# 極速記帳 v3.3 — v16.5
-
-- 新增餐廳 P&L（損益表）分組：Revenue、COGS、Personnel、Utilities、Marketing、Logistics、Admin
-- 自動計算：毛利、COGS%、人事% 與營業利益
-- 與 v16.4 相容：分類管理、快捷可編輯、J+W 平分、轉帳自動沖銷、月份選擇器、底部 Tab、全域 toast
+# 極速記帳 v3.3（v16.7.2 快捷管理修正版）
+- 點 **編輯**：自動捲到表單並高亮 1.5 秒
+- 表單改為 **flex-wrap**，小螢幕不再超出畫面
+- 快捷支援 **新增/覆寫、刪除、上下移動**，資料保存在 `localStorage`

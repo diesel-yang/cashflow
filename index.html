@@ -1,313 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#208b8c">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>極速記帳 v3.3</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=16.7">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="style.css?v=16.7.2">
 </head>
 <body>
-  <div id="app">
-    <header class="app-bar">
-      <div class="title">極速記帳 v3.3</div>
-      <div class="month-switcher">
-        <button class="ghost" @click="prevMonth">‹</button>
-        <button class="month-label" @click="openMonthPicker">{{ currentMonthLabel }} 📅</button>
-        <input type="month" ref="monthPicker" @change="onMonthPicked" style="position:absolute;opacity:0;width:0;height:0;border:0">
-        <button class="ghost" @click="nextMonth">›</button>
+  <header class="app-bar">
+    <div class="title">極速記帳 v3.3</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3>快捷管理</h3>
+      <div class="quick-form" id="quickForm">
+        <input id="qLabel" placeholder="名稱（例：午餐 120）">
+        <select id="qType">
+          <option value="expense">支出</option>
+          <option value="income">收入</option>
+        </select>
+        <input id="qCat" placeholder="分類（例：餐飲／外送平台）">
+        <input id="qAmt" inputmode="numeric" placeholder="金額">
+        <select id="qMode">
+          <option value="personal-JACK">JACK</option>
+          <option value="personal-WAL">WAL</option>
+          <option value="restaurant">餐廳</option>
+          <option value="personal-JW">J+W</option>
+        </select>
+        <label class="seg"><input type="checkbox" id="qAuto"> 一鍵入帳</label>
+        <button class="btn" id="qSave">新增/覆寫</button>
       </div>
-    </header>
 
-    <main>
-      <!-- 記帳 -->
-      <section v-show="tab==='input'">
-        <div class="card">
-          <div class="row">
-            <select v-model="mode">
-              <option value="restaurant">餐廳</option>
-              <option value="personal-JACK">JACK</option>
-              <option value="personal-WAL">WAL</option>
-              <option value="personal-JW">J+W（共同）</option>
-            </select>
-            <label class="seg"><input type="radio" value="expense" v-model="type"> 支出</label>
-            <label class="seg"><input type="radio" value="income" v-model="type"> 收入</label>
-          </div>
+      <ul class="quick-list" id="quickList"></ul>
+    </section>
+  </main>
 
-          <input v-model="amountStr" inputmode="numeric" class="big" placeholder="金額">
+  <nav class="tabbar">
+    <button class="active">記帳</button>
+    <button>轉帳</button>
+    <button>報表</button>
+    <button>設定</button>
+  </nav>
 
-          <div class="row">
-            <select v-model="category">
-              <optgroup label="餐廳（收入）">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='revenue')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="餐廳（COGS/成本）">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='cogs')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="人事費用">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='personnel')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="水電/房租等">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='utilities')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="行銷/平台">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='marketing')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="物流/交通">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='logistics')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="行政/財務">
-                <option v-for="c in categories.restaurant.filter(x=>x.type==='admin')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="個人支出">
-                <option v-for="c in categories.personal.filter(x=>x.type==='expense')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-              <optgroup label="個人收入">
-                <option v-for="c in categories.personal.filter(x=>x.type==='income')" :value="c.label">{{ c.label }}</option>
-              </optgroup>
-            </select>
-            <input v-model="vendor" placeholder="商家/店名（會依規則自動套分類）" @change="applyVendorRule" style="flex:1">
-          </div>
-
-          <input v-model="note" placeholder="備註（可留空）">
-          <input type="date" v-model="date">
-
-          <div class="quick-row" v-if="settings.quicks && settings.quicks.length">
-            <button class="chip" v-for="(q,qi) in settings.quicks" :key="qi" @click="applyQuick(q)">{{ q.label }}</button>
-          </div>
-
-          <div class="row">
-            <label class="seg"><input type="checkbox" v-model="isReimburse"> 報銷</label>
-            <input type="file" accept="image/*" @change="onReceipt">
-            <span v-if="hasReceipt" class="ok">已附憑證 ✅</span>
-          </div>
-
-          <button class="btn primary" @click="save">記錄</button>
-        </div>
-      </section>
-
-      <!-- 轉帳 -->
-      <section v-show="tab==='transfer'">
-        <div class="card">
-          <h3>轉帳 / 還款</h3>
-          <div class="row">
-            <select v-model="fromAccount">
-              <option>餐廳_銀行</option>
-              <option>餐廳_現金</option>
-            </select>
-            <span>→</span>
-            <select v-model="toAccount">
-              <option>JACK</option>
-              <option>WAL</option>
-            </select>
-          </div>
-          <input v-model="transferAmountStr" inputmode="numeric" class="big" placeholder="金額">
-          <input type="date" v-model="transferDate">
-          <input v-model="transferNote" placeholder="備註（選填）">
-          <button class="btn primary" @click="saveTransfer">建立轉帳並自動沖銷報銷</button>
-
-          <div class="stats">
-            <div class="stat">應付 JACK<br><b>{{ dueJACK.toLocaleString() }}</b></div>
-            <div class="stat">應付 WAL<br><b>{{ dueWAL.toLocaleString() }}</b></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 報表 -->
-      <section v-show="tab==='report'">
-        <div class="card">
-          <h3>月度總覽</h3>
-          <div class="stats">
-            <div class="stat">收入<br><b>+{{ sumIncome.toLocaleString() }}</b></div>
-            <div class="stat">支出<br><b>-{{ sumExpense.toLocaleString() }}</b></div>
-            <div class="stat">結餘<br><b>{{ net.toLocaleString() }}</b></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>餐廳 P&L（損益表）</h3>
-          <div class="row"><small>說明：COGS=銷貨成本；Personnel=人事；Utilities=水電/租金。</small></div>
-          <table class="pl">
-            <tbody>
-              <tr><td>營業收入（Revenue）</td><td class="num">+{{ pl.revenue.toLocaleString() }}</td><td class="pct"></td></tr>
-              <tr><td>銷貨成本（COGS）</td><td class="num">-{{ pl.cogs.toLocaleString() }}</td><td class="pct">{{ plPerc.cogs }}%</td></tr>
-              <tr class="line"><td>毛利（Gross Profit）</td><td class="num"><b>{{ pl.gp.toLocaleString() }}</b></td><td class="pct">{{ plPerc.gp }}%</td></tr>
-              <tr><td>人事（Personnel）</td><td class="num">-{{ pl.personnel.toLocaleString() }}</td><td class="pct">{{ plPerc.personnel }}%</td></tr>
-              <tr><td>水電房租等（Utilities）</td><td class="num">-{{ pl.utilities.toLocaleString() }}</td><td class="pct"></td></tr>
-              <tr><td>行銷（Marketing）</td><td class="num">-{{ pl.marketing.toLocaleString() }}</td><td class="pct"></td></tr>
-              <tr><td>物流（Logistics）</td><td class="num">-{{ pl.logistics.toLocaleString() }}</td><td class="pct"></td></tr>
-              <tr><td>行政/稅務（Admin）</td><td class="num">-{{ pl.admin.toLocaleString() }}</td><td class="pct"></td></tr>
-              <tr class="line"><td>營業利益（Operating Profit）</td><td class="num"><b>{{ pl.op.toLocaleString() }}</b></td><td class="pct"></td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="card">
-          <h3>類型小計 & 明細</h3>
-          <div class="accordion">
-            <div class="acc-item" v-for="t in plTypes" :key="t.key">
-              <button class="acc-head" @click="toggleDetail(t.key)">
-                <span>{{ t.label }}</span>
-                <span class="muted">小計：{{ typeTotals[t.key].toLocaleString() }}（{{ typeCounts[t.key] }} 筆）</span>
-                <span class="chev">{{ expanded[t.key] ? '▲' : '▼' }}</span>
-              </button>
-              <div class="acc-body" v-show="expanded[t.key]">
-                <table class="detail">
-                  <thead><tr><th>日期</th><th>分類</th><th>商家/備註</th><th class="num">金額</th></tr></thead>
-                  <tbody>
-                    <tr v-for="r in detailByType[t.key]" :key="r.id">
-                      <td>{{ r.date }}</td>
-                      <td>{{ r.category }}</td>
-                      <td class="muted">{{ (r.vendor || r.note || '') }}</td>
-                      <td class="num">{{ (r.type==='income'? '+' : '-') + r.amount.toLocaleString() }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 設定 -->
-      <section v-show="tab==='settings'">
-        <div class="card">
-          <h3>分類管理（可直接新增/刪除）</h3>
-          <div class="cat-columns">
-            <div>
-              <h4>餐廳分類</h4>
-              <div class="row">
-                <input v-model="newCat.label" placeholder="新分類（例：餐具耗材）" style="flex:1">
-                <select v-model="newCat.type">
-                  <option value="revenue">revenue（收入）</option>
-                  <option value="cogs">cogs（銷貨成本）</option>
-                  <option value="personnel">personnel（人事）</option>
-                  <option value="utilities">utilities（水電租金）</option>
-                  <option value="marketing">marketing（行銷）</option>
-                  <option value="logistics">logistics（物流）</option>
-                  <option value="admin">admin（行政財務）</option>
-                </select>
-                <button class="btn" @click="addCategory('restaurant')">新增</button>
-              </div>
-              <div class="cat-item" v-for="(c,ci) in categories.restaurant" :key="ci">
-                <div>{{ c.label }} <small>({{ c.type }})</small></div>
-                <button class="link danger" @click="removeCategory('restaurant',ci)">刪除</button>
-              </div>
-            </div>
-            <div>
-              <h4>個人分類</h4>
-              <div class="row">
-                <input v-model="newCatP.label" placeholder="新分類（例：健身）" style="flex:1">
-                <select v-model="newCatP.type">
-                  <option value="expense">expense（支出）</option>
-                  <option value="income">income（收入）</option>
-                </select>
-                <button class="btn" @click="addCategory('personal')">新增</button>
-              </div>
-              <div class="cat-item" v-for="(c,ci) in categories.personal" :key="ci">
-                <div>{{ c.label }} <small>({{ c.type }})</small></div>
-                <button class="link danger" @click="removeCategory('personal',ci)">刪除</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 快捷管理 -->
-        <div class="card">
-          <h3>快捷管理</h3>
-          <div class="quick-form" ref="quickForm">
-            <input v-model="newQuick.label" placeholder="名稱（例：午餐 120）">
-            <select v-model="newQuick.type">
-              <option value="expense">支出</option>
-              <option value="income">收入</option>
-            </select>
-            <input v-model="newQuick.category" placeholder="分類（例：餐飲／外送平台）">
-            <input v-model.number="newQuick.amount" inputmode="numeric" placeholder="金額">
-            <select v-model="newQuick.mode">
-              <option value="personal-JACK">JACK</option>
-              <option value="personal-WAL">WAL</option>
-              <option value="restaurant">餐廳</option>
-              <option value="personal-JW">J+W</option>
-            </select>
-            <label class="seg"><input type="checkbox" v-model="newQuick.autoSave"> 一鍵入帳</label>
-            <button class="btn" @click="addQuick">新增/覆寫</button>
-          </div>
-
-          <ul class="quick-list" v-if="settings.quicks.length">
-            <li class="quick-item" v-for="(q,idx) in settings.quicks" :key="q.label+idx">
-              <div>
-                <b>{{ q.label }}</b>
-                <span class="muted">｜{{ q.type }}｜{{ q.category }}｜{{ q.amount }}｜{{ q.mode }}</span>
-                <span v-if="q.autoSave" class="muted">｜一鍵</span>
-              </div>
-              <div class="row">
-                <button class="link" @click="moveQuick(idx,-1)">↑</button>
-                <button class="link" @click="moveQuick(idx,1)">↓</button>
-                <button class="link" @click="editQuick(idx)">編輯</button>
-                <button class="link danger" @click="delQuick(idx)">刪除</button>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div class="card">
-          <h3>預算設定</h3>
-          <div class="row">
-            <label>近超支門檻：</label>
-            <input v-model.number="settings.warnThreshold" inputmode="decimal" style="width:120px">
-            <small>（例如 0.9 表示 90% 時提醒）</small>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>CSV 匯入/匯出</h3>
-          <div class="row">
-            <button class="btn" @click="exportCSV('month')">匯出本月 CSV</button>
-            <button class="btn" @click="exportCSV('all')">匯出全部 CSV</button>
-            <input type="file" accept=".csv,text/csv" @change="importCSV">
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>雲端同步（讀 GitHub Pages JSON）</h3>
-          <div class="row">
-            <input v-model="settings.remoteUrl" placeholder="遠端 JSON 位置（https://...）" style="flex:1">
-          </div>
-          <div class="row">
-            <button class="btn" @click="pullRemote">從網址拉取 → 合併</button>
-            <button class="btn" @click="pushRemote">產生 JSON 檔（下載）</button>
-          </div>
-          <small>說明：GitHub Pages 僅支援讀取；請把下載的 JSON 手動上傳/覆蓋到你的 repo。</small>
-        </div>
-
-        <div class="row">
-          <button class="btn primary" @click="saveSettings">儲存設定</button>
-          <button class="btn" @click="resetSettings">回復預設</button>
-        </div>
-      </section>
-    </main>
-
-    <nav class="tabbar">
-      <button :class="{active: tab==='input'}" @click="setTab('input')">記帳</button>
-      <button :class="{active: tab==='transfer'}" @click="setTab('transfer')">轉帳</button>
-      <button :class="{active: tab==='report'}" @click="setTab('report')">報表</button>
-      <button :class="{active: tab==='settings'}" @click="setTab('settings')">設定</button>
-    </nav>
-
-    <footer class="footer"><small>極速記帳 v3.3 build v16.7 2025-09-01</small></footer>
-  </div>
+  <footer class="footer"><small>極速記帳 v3.3 build v16.7.2</small></footer>
 
   <div id="toast" class="toast"></div>
-  <script defer src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-  <script defer src="app.js?v=16.7"></script>
-  <script>
-    if('serviceWorker' in navigator){
-      window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=16_7'));
-    }
-  </script>
+  <script src="app.js?v=16.7.2"></script>
 </body>
 </html>
