@@ -1,9 +1,1 @@
-{
-  "name": "極速記帳",
-  "short_name": "記帳",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#208b8c",
-  "icons": []
-}
+{"name":"極速記帳","short_name":"記帳","start_url":"./index.html","display":"standalone","theme_color":"#208b8c","background_color":"#ffffff","icons":[]}

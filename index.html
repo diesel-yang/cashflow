@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
-  <link rel="stylesheet" href="style.css?v=16.7.5" />
+  <link rel="stylesheet" href="style.css?v=16.8" />
 </head>
 <body>
   <header class="app-bar">
@@ -27,18 +27,18 @@
             <option value="restaurant">餐廳</option>
             <option value="personal-JACK">JACK</option>
             <option value="personal-WAL">WAL</option>
-            <option value="personal-JW">J+W（共同支出）</option>
+            <option value="personal-JW">J+W（共同）</option>
           </select>
+          <select id="r-type">
+            <option value="expense">支出</option>
+            <option value="income">收入</option>
+          </select>
+          <div class="full">
+            <select id="r-cat"></select>
+          </div>
+          <input id="r-amount" inputmode="numeric" placeholder="金額" />
+          <input id="r-note" placeholder="備註（可選）" />
           <label class="seg"><input type="checkbox" id="r-reimburse" /> 報銷</label>
-          <div class="full">
-            <input id="r-amount" inputmode="numeric" placeholder="金額" />
-          </div>
-          <div class="full">
-            <input id="r-merchant" placeholder="商家/店名（自動分類）" />
-          </div>
-          <div class="full">
-            <input id="r-note" placeholder="備註（可選）" />
-          </div>
           <button class="btn primary full" id="r-save">記錄</button>
         </div>
       </div>
@@ -58,31 +58,47 @@
           <select id="t-to">
             <option value="JACK">JACK</option>
             <option value="WAL">WAL</option>
-            <option value="restaurant_cash">餐廳_現金</</option>
+            <option value="restaurant_cash">餐廳_現金</option>
             <option value="restaurant_bank">餐廳_銀行</option>
           </select>
           <div class="full"><input id="t-amount" inputmode="numeric" placeholder="金額" /></div>
-          <button class="btn primary full" id="t-save">建立轉帳並自動沖銷報銷</button>
+          <button class="btn primary full" id="t-save">建立轉帳</button>
         </div>
       </div>
     </section>
 
     <section id="tab-report" class="tab-pane">
       <div class="card">
-        <h3>報表</h3>
+        <h3>報表（本月）</h3>
         <div class="row">
-          <label class="seg"><input type="checkbox" id="rp-merge" checked /> 淨額化互轉/報銷</label>
           <label class="seg"><input type="checkbox" id="rp-expand" /> 明細展開</label>
           <label class="seg"><input type="checkbox" id="rp-subtotal" /> 按類型小計</label>
         </div>
-        <div class="report-box" id="reportBox">（這裡顯示每月收入/支出/應付 JACK/WAL 與餐廳 P&L 摘要）</div>
+        <div id="reportBox" class="report-box"></div>
       </div>
     </section>
 
     <section id="tab-settings" class="tab-pane">
       <div class="card">
-        <h3>分類管理</h3>
-        <p class="muted">此版本為簡化示例，請接入你的實際 categories 資料。</p>
+        <h3>分類管理（餐廳 + 個人）</h3>
+        <div class="grid g2">
+          <input id="c-new" placeholder="新分類（例：餐具耗材）" />
+          <select id="c-type">
+            <option value="revenue">revenue（營業收入）</option>
+            <option value="cogs">cogs（銷貨成本）</option>
+            <option value="personnel">personnel（人事費用）</option>
+            <option value="utilities">utilities（場地水電）</option>
+            <option value="marketing">marketing（行銷/平台）</option>
+            <option value="logistics">logistics（物流運費）</option>
+            <option value="admin">admin（行政/財務/法務）</option>
+            <option value="tax">tax（稅捐）</option>
+            <option value="transport">transport（交通/油資/停車）</option>
+            <option value="finance">finance（金流/銀行手續費）</option>
+            <option value="misc">misc（雜項）</option>
+          </select>
+          <button class="btn" id="c-add">新增</button>
+        </div>
+        <ul id="catList" class="cat-list"></ul>
       </div>
 
       <div class="card" id="quick-manage">
@@ -108,23 +124,16 @@
       </div>
 
       <div class="card">
-        <h3>預算設定</h3>
-        <div class="grid g2">
-          <label>近超支門檻（0~1）<input id="budget-th" value="0.9" /></label>
-        </div>
-      </div>
-
-      <div class="card">
         <h3>系統</h3>
         <button class="btn danger" id="btn-reset">🔄 重置所有資料</button>
-        <p class="muted">會清除本機 LocalStorage、IndexedDB、快取與 Service Worker，然後重新載入。</p>
+        <p class="muted">會清除本機 LocalStorage、IndexedDB、Cache 與 Service Worker，並重新載入。</p>
       </div>
     </section>
   </main>
 
-  <footer class="footer"><small>極速記帳 v3.3 build v16.7.5</small></footer>
+  <footer class="footer"><small>極速記帳 v3.3 build v16.8</small></footer>
 
   <div id="toast" class="toast"></div>
-  <script src="app.js?v=16.7.5"></script>
+  <script src="app.js?v=16.8"></script>
 </body>
 </html>
