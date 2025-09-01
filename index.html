@@ -23,6 +23,7 @@
     </header>
 
     <main>
+      <!-- 記帳 -->
       <section v-show="tab==='input'">
         <div class="card">
           <div class="row">
@@ -37,12 +38,44 @@
           </div>
 
           <input v-model="amountStr" inputmode="numeric" class="big" placeholder="金額">
-          <input v-model="category" placeholder="分類">
-          <input v-model="vendor" placeholder="商家/店名（自動套用分類規則）" @change="applyVendorRule">
+
+          <div class="row">
+            <select v-model="category">
+              <optgroup label="餐廳（收入）">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='revenue')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="餐廳（COGS/成本）">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='cogs')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="人事費用">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='personnel')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="水電/房租等">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='utilities')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="行銷/平台">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='marketing')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="物流/交通">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='logistics')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="行政/財務">
+                <option v-for="c in categories.restaurant.filter(x=>x.type==='admin')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="個人支出">
+                <option v-for="c in categories.personal.filter(x=>x.type==='expense')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+              <optgroup label="個人收入">
+                <option v-for="c in categories.personal.filter(x=>x.type==='income')" :value="c.label">{{c.label}}</option>
+              </optgroup>
+            </select>
+            <input v-model="vendor" placeholder="商家/店名（自動套用分類規則）" @change="applyVendorRule" style="flex:1">
+          </div>
+
           <input v-model="note" placeholder="備註（可留空）">
           <input type="date" v-model="date">
 
-          <div class="quick-row">
+          <div class="quick-row" v-if="settings.quicks && settings.quicks.length">
             <button class="chip" v-for="q in settings.quicks" :key="q.label" @click="applyQuick(q)">{{ q.label }}</button>
           </div>
 
@@ -56,6 +89,7 @@
         </div>
       </section>
 
+      <!-- 轉帳 -->
       <section v-show="tab==='transfer'">
         <div class="card">
           <h3>轉帳 / 還款</h3>
@@ -82,46 +116,35 @@
         </div>
       </section>
 
+      <!-- 報表 -->
       <section v-show="tab==='report'">
         <div class="card">
+          <h3>月度總覽</h3>
           <div class="stats">
             <div class="stat">收入<br><b>+{{ sumIncome.toLocaleString() }}</b></div>
             <div class="stat">支出<br><b>-{{ sumExpense.toLocaleString() }}</b></div>
             <div class="stat">結餘<br><b>{{ net.toLocaleString() }}</b></div>
           </div>
         </div>
-      </section>
 
-      <section v-show="tab==='settings'">
         <div class="card">
-          <h3>快捷管理</h3>
-          <div class="quick-form">
-            <input v-model="newQuick.label" placeholder="顯示文字">
-            <select v-model="newQuick.type">
-              <option value="expense">支出</option>
-              <option value="income">收入</option>
-            </select>
-            <input v-model="newQuick.category" placeholder="分類">
-            <input v-model.number="newQuick.amount" type="number" placeholder="金額">
-            <select v-model="newQuick.mode">
-              <option value="restaurant">餐廳</option>
-              <option value="personal-JACK">JACK</option>
-              <option value="personal-WAL">WAL</option>
-              <option value="personal-JW">J+W（共同）</option>
-            </select>
-            <label class="seg"><input type="checkbox" v-model="newQuick.autoSave"> 自動送出</label>
-            <button class="btn" @click="addQuick">新增/覆寫</button>
+          <h3>餐廳 P&L（損益表）</h3>
+          <div class="row">
+            <small>說明：COGS=銷貨成本；Personnel=人事；Utilities=水電/租金等。</small>
           </div>
-          <ul class="quick-list">
-            <li v-for="(q, idx) in settings.quicks" :key="idx" class="quick-item">
-              <span>{{ q.label }} — {{ q.type }}/{{ q.category }}/{{ q.amount }} / {{ q.mode }} {{ q.autoSave ? '（自動送出）' : '' }}</span>
-              <span class="actions">
-                <button class="link" @click="editQuick(idx)">編輯</button>
-                <button class="link danger" @click="delQuick(idx)">刪除</button>
-              </span>
-            </li>
-          </ul>
-          <button class="btn primary" @click="saveSettings">儲存設定</button>
+          <table class="pl">
+            <tbody>
+              <tr><td>營業收入（Revenue）</td><td class="num">+{{ pl.revenue.toLocaleString() }}</td><td class="pct"></td></tr>
+              <tr><td>銷貨成本（COGS）</td><td class="num">-{{ pl.cogs.toLocaleString() }}</td><td class="pct">{{ plPerc.cogs }}%</td></tr>
+              <tr class="line"><td>毛利（Gross Profit）</td><td class="num"><b>{{ pl.gp.toLocaleString() }}</b></td><td class="pct">{{ plPerc.gp }}%</td></tr>
+              <tr><td>人事（Personnel）</td><td class="num">-{{ pl.personnel.toLocaleString() }}</td><td class="pct">{{ plPerc.personnel }}%</td></tr>
+              <tr><td>水電房租等（Utilities）</td><td class="num">-{{ pl.utilities.toLocaleString() }}</td><td class="pct"></td></tr>
+              <tr><td>行銷（Marketing）</td><td class="num">-{{ pl.marketing.toLocaleString() }}</td><td class="pct"></td></tr>
+              <tr><td>物流（Logistics）</td><td class="num">-{{ pl.logistics.toLocaleString() }}</td><td class="pct"></td></tr>
+              <tr><td>行政/稅務（Admin）</td><td class="num">-{{ pl.admin.toLocaleString() }}</td><td class="pct"></td></tr>
+              <tr class="line"><td>營業利益（Operating Profit）</td><td class="num"><b>{{ pl.op.toLocaleString() }}</b></td><td class="pct"></td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
     </main>
@@ -133,13 +156,13 @@
       <button :class="{active: tab==='settings'}" @click="setTab('settings')">設定</button>
     </nav>
 
-    <footer class="footer"><small>極速記帳 v3.3 build v16.3 2025-09-01</small></footer>
+    <footer class="footer"><small>極速記帳 v3.3 build v16.5 2025-09-01</small></footer>
   </div>
 
   <div id="toast" class="toast"></div>
   <script defer src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
   <script defer src="app.js"></script>
-  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=16_3'));}</script>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=16_5'));}</script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-# 極速記帳 v3.3 — v16.3 hotfix
+# 極速記帳 v3.3 — v16.5
 
-- 修正 footer 版本號存取（避免 null）
-- 確保 `settings.quicks` 具備預設值（避免 undefined）
-- 保留 v16.2 功能：可編輯快捷、按鈕式 Tab、J+W 拆分、轉帳自動沖銷、全域 toast
+- 新增餐廳 P&L（損益表）分組：Revenue、COGS、Personnel、Utilities、Marketing、Logistics、Admin
+- 自動計算：毛利、COGS%、人事% 與營業利益
+- 與 v16.4 相容：分類管理、快捷可編輯、J+W 平分、轉帳自動沖銷、月份選擇器、底部 Tab、全域 toast
