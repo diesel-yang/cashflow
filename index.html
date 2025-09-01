@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#208b8c">
   <title>極速記帳 v3.3</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=16.7">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
 </head>
@@ -145,7 +145,6 @@
           </table>
         </div>
 
-        <!-- 明細展開 + 按類型小計 -->
         <div class="card">
           <h3>類型小計 & 明細</h3>
           <div class="accordion">
@@ -170,7 +169,6 @@
               </div>
             </div>
           </div>
-          <small class="muted">註：收入（Revenue）為正，其餘為成本/費用。</small>
         </div>
       </section>
 
@@ -217,10 +215,10 @@
           </div>
         </div>
 
-        <!-- 快捷管理（新增/刪除/排序） -->
+        <!-- 快捷管理 -->
         <div class="card">
           <h3>快捷管理</h3>
-          <div class="quick-form">
+          <div class="quick-form" ref="quickForm">
             <input v-model="newQuick.label" placeholder="名稱（例：午餐 120）">
             <select v-model="newQuick.type">
               <option value="expense">支出</option>
@@ -253,7 +251,6 @@
               </div>
             </li>
           </ul>
-          <small class="muted">排序越上方代表在「記帳」頁的快捷列優先顯示。</small>
         </div>
 
         <div class="card">
@@ -306,7 +303,7 @@
   <div id="toast" class="toast"></div>
   <script defer src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="app.js?v=16.7"></script>
   <script>
     if('serviceWorker' in navigator){
       window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=16_7'));
