@@ -28,8 +28,35 @@ input:focus,select:focus{outline:2px solid #a7dfe0}
 .pl tr.line td{border-top:2px solid #e5e7eb;background:#fafafa}
 .cat-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .cat-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #eee}
-.quick-form{display:grid;grid-template-columns:1.1fr 110px 1fr 120px 1fr 140px auto;gap:8px;align-items:center}
-.quick-list{list-style:none;margin:8px 0 0 0;padding:0}
+/* 取代原本的 .quick-form grid 設定 */
+.quick-form{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.quick-form > *{
+  /* 讓每個欄位最小 140px，空間夠時自動拉寬 */
+  flex:1 1 140px;
+}
+.quick-form .seg,
+.quick-form .btn{
+  /* 讓 checkbox 與按鈕維持自然寬度，不佔滿一整行 */
+  flex:0 0 auto;
+}
+
+/* 小螢幕再放寬最小寬，減少擠壓 */
+@media (max-width: 420px){
+  .quick-form > *{ flex:1 1 120px; }
+}
+
+/* 編輯後的高亮效果 */
+.pulse{
+  box-shadow:0 0 0 3px rgba(32,139,140,.25);
+  transition: box-shadow .2s;
+}
+
+}.quick-list{list-style:none;margin:8px 0 0 0;padding:0}
 .quick-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #eee}
 .muted{color:#6b7280}
 .accordion{display:block}
