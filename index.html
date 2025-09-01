@@ -23,7 +23,6 @@
     </header>
 
     <main>
-      <!-- 記帳 -->
       <section v-show="tab==='input'">
         <div class="card">
           <div class="row">
@@ -33,16 +32,12 @@
               <option value="personal-WAL">WAL</option>
               <option value="personal-JW">J+W（共同）</option>
             </select>
-            <label class="seg">
-              <input type="radio" value="expense" v-model="type"> 支出
-            </label>
-            <label class="seg">
-              <input type="radio" value="income" v-model="type"> 收入
-            </label>
+            <label class="seg"><input type="radio" value="expense" v-model="type"> 支出</label>
+            <label class="seg"><input type="radio" value="income" v-model="type"> 收入</label>
           </div>
 
           <input v-model="amountStr" inputmode="numeric" class="big" placeholder="金額">
-          <input v-model="category" placeholder="分類（例：食 / 海鮮 / 外送平台）">
+          <input v-model="category" placeholder="分類">
           <input v-model="vendor" placeholder="商家/店名（自動套用分類規則）" @change="applyVendorRule">
           <input v-model="note" placeholder="備註（可留空）">
           <input type="date" v-model="date">
@@ -61,7 +56,6 @@
         </div>
       </section>
 
-      <!-- 轉帳 -->
       <section v-show="tab==='transfer'">
         <div class="card">
           <h3>轉帳 / 還款</h3>
@@ -88,23 +82,8 @@
         </div>
       </section>
 
-      <!-- 報表（簡易匯總） -->
       <section v-show="tab==='report'">
         <div class="card">
-          <div class="row">
-            <select v-model="filterEntity">
-              <option value="all">全部</option>
-              <option value="restaurant">餐廳</option>
-              <option value="personal">個人</option>
-            </select>
-            <select v-if="filterEntity==='personal'" v-model="filterPerson">
-              <option value="all">JACK+WAL</option>
-              <option value="JACK">JACK</option>
-              <option value="WAL">WAL</option>
-            </select>
-            <label class="seg"><input type="checkbox" v-model="netTransfers"> 淨額化互轉/報銷</label>
-          </div>
-
           <div class="stats">
             <div class="stat">收入<br><b>+{{ sumIncome.toLocaleString() }}</b></div>
             <div class="stat">支出<br><b>-{{ sumExpense.toLocaleString() }}</b></div>
@@ -113,13 +92,7 @@
         </div>
       </section>
 
-      <!-- 設定 -->
       <section v-show="tab==='settings'">
-        <div class="card">
-          <h3>預算設定（近超支門檻）</h3>
-          <input v-model.number="settings.warnThreshold" type="number" min="0" max="1" step="0.05">
-        </div>
-
         <div class="card">
           <h3>快捷管理</h3>
           <div class="quick-form">
@@ -139,7 +112,6 @@
             <label class="seg"><input type="checkbox" v-model="newQuick.autoSave"> 自動送出</label>
             <button class="btn" @click="addQuick">新增/覆寫</button>
           </div>
-
           <ul class="quick-list">
             <li v-for="(q, idx) in settings.quicks" :key="idx" class="quick-item">
               <span>{{ q.label }} — {{ q.type }}/{{ q.category }}/{{ q.amount }} / {{ q.mode }} {{ q.autoSave ? '（自動送出）' : '' }}</span>
@@ -149,20 +121,6 @@
               </span>
             </li>
           </ul>
-        </div>
-
-        <div class="card">
-          <h3>匯入 / 同步</h3>
-          <input type="file" accept=".csv" @change="importCSV">
-          <div class="row">
-            <button class="btn" @click="exportCSV('month')">匯出本月 CSV</button>
-            <button class="btn" @click="exportCSV('all')">匯出全部 CSV</button>
-            <button class="btn" @click="pushRemote">產生 JSON 檔（下載）</button>
-          </div>
-          <div class="row">
-            <input v-model="settings.remoteUrl" placeholder="雲端 JSON 位置（GitHub Pages）">
-            <button class="btn" @click="pullRemote">從網址拉取 → 合併</button>
-          </div>
           <button class="btn primary" @click="saveSettings">儲存設定</button>
         </div>
       </section>
@@ -175,17 +133,13 @@
       <button :class="{active: tab==='settings'}" @click="setTab('settings')">設定</button>
     </nav>
 
-    <footer class="footer"><small>極速記帳 v3.3 build v16.2 2025-09-01</small></footer>
+    <footer class="footer"><small>極速記帳 v3.3 build v16.3 2025-09-01</small></footer>
   </div>
 
-  <!-- 全域 toast -->
   <div id="toast" class="toast"></div>
-
   <script defer src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
   <script defer src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js?v=16_2'); }); }
-  </script>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=16_3'));}</script>
 </body>
 </html>

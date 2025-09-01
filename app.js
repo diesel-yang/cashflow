@@ -1,6 +1,6 @@
 const { createApp, ref, computed } = Vue;
 
-// 全域 toast
+// global toast
 window.__cf_toast__ = function(msg){
   try{
     const t = document.getElementById('toast');
@@ -11,7 +11,6 @@ window.__cf_toast__ = function(msg){
   }catch(e){ alert(msg); }
 };
 
-// 儲存
 const storage = localforage.createInstance({ name:'cashflow', storeName:'records' });
 const receipts = localforage.createInstance({ name:'cashflow', storeName:'receipts' });
 const settingsStore = localforage.createInstance({ name:'cashflow', storeName:'settings' });
@@ -20,7 +19,6 @@ function monthKey(d){ return d.slice(0,7); }
 
 createApp({
   setup(){
-    // tab 與月份
     const tab = ref('input');
     function setTab(t){ tab.value=t; window.scrollTo({top:0, behavior:'instant'}); }
 
@@ -33,7 +31,7 @@ createApp({
     function prevMonth(){ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m-2,1).toISOString().slice(0,7); }
     function nextMonth(){ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m,1).toISOString().slice(0,7); }
 
-    // 設定
+    // settings with quicks default
     const settings = ref({
       warnThreshold: 0.9,
       quicks: [
@@ -46,7 +44,7 @@ createApp({
     });
     const newQuick = ref({ label:'', type:'expense', category:'', amount:0, mode:'personal-JACK', autoSave:false });
 
-    // 記帳欄位
+    // input fields
     const type = ref('expense');
     const mode = ref('restaurant');
     const amountStr = ref('');
@@ -66,7 +64,6 @@ createApp({
       vendor.value = q.vendor || '';
       if (q.autoSave) save(); else window.__cf_toast__('已帶入快捷內容');
     }
-
     function addQuick(){
       const q = { ...newQuick.value };
       if(!q.label || !q.category || !q.amount) return alert('請完整填寫快捷');
@@ -84,20 +81,11 @@ createApp({
       if(t.includes('全聯')){ mode.value='personal-JACK'; category.value='食'; }
     }
 
-    // 資料
+    // data
     const allRecords = ref([]);
     const monthRecords = computed(()=> allRecords.value.filter(r=> monthKey(r.date)===cursor.value));
-    const filterEntity = ref('all');
-    const filterPerson = ref('all');
-    const netTransfers = ref(true);
-    const filteredMonthRecords = computed(()=> monthRecords.value.filter(r=>{
-      if(filterEntity.value==='restaurant' && r.entity!=='restaurant') return false;
-      if(filterEntity.value==='personal' && r.entity!=='personal') return false;
-      if(filterEntity.value==='personal' && filterPerson.value!=='all'){ if((r.person||'') !== filterPerson.value) return false; }
-      return true;
-    }));
-    const sumIncome = computed(()=> filteredMonthRecords.value.filter(r=>r.type==='income').reduce((a,b)=>a+b.amount,0));
-    const sumExpense = computed(()=> filteredMonthRecords.value.filter(r=>r.type==='expense').reduce((a,b)=>a+b.amount,0));
+    const sumIncome = computed(()=> monthRecords.value.filter(r=>r.type==='income').reduce((a,b)=>a+b.amount,0));
+    const sumExpense = computed(()=> monthRecords.value.filter(r=>r.type==='expense').reduce((a,b)=>a+b.amount,0));
     const net = computed(()=> sumIncome.value - sumExpense.value);
 
     const dueJACK = computed(()=> monthRecords.value.filter(r=>r.entity==='restaurant' && r.settlement && r.settlement.status!=='paid' && r.settlement.due_to==='JACK').reduce((a,b)=> a + (typeof b.settlement.remaining==='number' ? b.settlement.remaining : b.amount),0));
@@ -130,7 +118,7 @@ createApp({
       window.__cf_toast__('已記錄');
     }
 
-    // 轉帳 & 自動沖銷
+    // transfer
     const fromAccount = ref('餐廳_銀行'); const toAccount = ref('JACK');
     const transferAmountStr = ref(''); const transferDate = ref(new Date().toISOString().slice(0,10)); const transferNote = ref('');
     async function saveTransfer(){
@@ -152,7 +140,7 @@ createApp({
       }
     }
 
-    // 匯入/匯出/同步（簡版）
+    // csv minimal
     function parseCSVLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch=='"'){ if(q && line[i+1]=='"'){ cur+='"'; i++; } else { q=!q; } continue; } if(ch===',' && !q){ out.push(cur); cur=''; } else cur+=ch; } out.push(cur); return out.map(s=>s.trim()); }
     function exportCSV(scope){
       const recs = scope==='month' ? monthRecords.value : allRecords.value.slice().sort((a,b)=> a.date < b.date ? -1 : 1);
@@ -181,16 +169,18 @@ createApp({
       }
       window.__cf_toast__(`CSV 匯入完成：新增 ${imported}，更新 ${updated}，略過 ${skipped}`); evt.target.value='';
     }
-    async function pullRemote(){ if(!settings.value.remoteUrl) return alert('請設定遠端 JSON 位置'); const res = await fetch(settings.value.remoteUrl,{cache:'no-store'}); if(!res.ok) return alert('讀取失敗'); const data = await res.json(); if(!Array.isArray(data)) return alert('格式需為陣列'); let added=0, updated=0; for(const r of data){ const ex=allRecords.value.find(x=>x.id===r.id); if(ex){ if((r.date||'')>(ex.date||'')){ await storage.setItem(r.id,r); Object.assign(ex,r); updated++; } } else { await storage.setItem(r.id,r); allRecords.value.push(r); added++; } } window.__cf_toast__(`已合併：新增 ${added}、更新 ${updated}`); }
+
+    async function pullRemote(){ if(!settings.value.remoteUrl) return alert('請設定遠端 JSON 位置'); const res = await fetch(settings.value.remoteUrl,{cache:'no-store'}); if(!res.ok) return alert('讀取失敗'); const data = await res.json(); if(!Array.isArray(data)) return alert('格式需為陣列'); let added=0, updated=0; for(const r of data){ const ex=allRecords.value.find(x=>x.id===r.id); if(ex){ if((r.date||'')>(ex.date||'')){ await storage.setItem(r.id,r); Object.assign(ex,r); updated++; } } else { await storage.setItem(r.id,r); allRecords.value.push(r); added++; } } window.__cf_toast__(`雲端合併完成：新增 ${added}，更新 ${updated}`); }
+
     async function pushRemote(){ const data=JSON.stringify(allRecords.value,null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cashflow_data.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); window.__cf_toast__('已下載 JSON，請上傳到 GitHub Pages'); }
 
     async function saveSettings(){ await settingsStore.setItem('settings', JSON.parse(JSON.stringify(settings.value))); window.__cf_toast__('設定已儲存'); }
 
     load();
 
-    // footer 版本容錯（避免 null）
+    // footer version safe
     const footerEl = document.querySelector('.footer small');
-    const version = ref(footerEl ? footerEl.textContent : 'v16.2');
+    const version = ref(footerEl ? footerEl.textContent : 'v16.3');
 
     return {
       // tab
@@ -198,11 +188,11 @@ createApp({
       // month
       currentMonthLabel, monthPicker, openMonthPicker, onMonthPicked, prevMonth, nextMonth,
       // input
-      type, mode, amountStr, category, vendor, note, date, isReimburse, onReceipt, hasReceipt, save,
+      type, mode, amountStr, category, vendor, note, date, isReimburse, onReceipt, hasReceipt, save, applyVendorRule,
       // transfer
       fromAccount, toAccount, transferAmountStr, transferDate, transferNote, saveTransfer, dueJACK, dueWAL,
       // report
-      filterEntity, filterPerson, netTransfers, monthRecords, sumIncome, sumExpense, net,
+      monthRecords, sumIncome, sumExpense, net,
       // quicks
       settings, newQuick, addQuick, editQuick, delQuick, applyQuick,
       // csv/sync
