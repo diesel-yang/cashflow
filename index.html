@@ -1,156 +1,212 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
 
-  <!-- 样式 -->
-  <link rel="stylesheet" href="style.css?v=17.1" />
-
-  <!-- Firebase（Compat 版，最省事） -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <!-- 基礎樣式（行動優先） -->
+  <style>
+    :root{--c:#167c80;--bg:#f4f7f7;--card:#fff;--muted:#6b7280}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans CJK TC", "PingFang TC","Microsoft JhengHei",sans-serif;color:#0f172a;}
+    header{background:var(--c);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+    header .brand{font-weight:800;font-size:18px;letter-spacing:.5px}
+    main{padding:12px;max-width:900px;margin:0 auto}
+    .tabs{display:flex;gap:10px;margin:8px 0 14px}
+    .tab{flex:1;text-align:center;background:#eaf2f3;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
+    .tab.active{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+    .section{display:none} .section.active{display:block}
+    .card{background:var(--card);border-radius:14px;padding:12px 12px;margin:10px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}
+    .muted{color:var(--muted)}
+    .btn{display:inline-block;border:none;background:var(--c);color:#fff;padding:12px 16px;border-radius:12px;font-weight:800;width:100%;cursor:pointer}
+    .btn.secondary{background:#e8eff0;color:#0f172a}
+    .pill{border-radius:999px;background:#eef6f6;padding:6px 10px;font-size:14px}
+    input,select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #d0d7de;background:#fff}
+    label{font-size:14px;color:#334155}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .switches{display:flex;gap:16px;align-items:center}
+    hr{border:none;border-top:1px solid #eef2f7;margin:8px 0}
+    footer{padding:22px 0 36px;text-align:center;color:#94a3b8;font-size:13px}
+    @media (min-width:720px){ .grid{grid-template-columns:1fr 1fr} }
+  </style>
 </head>
+
 <body>
-  <header class="app-bar"><div class="title">極速記帳 v3.3</div></header>
+  <header>
+    <div class="brand">極速記帳 v3.3</div>
+  </header>
 
   <main>
-    <nav class="tabbar top">
-      <button class="tab-btn active" data-tab="record">記帳</button>
-      <button class="tab-btn" data-tab="transfer">轉帳</button>
-      <button class="tab-btn" data-tab="report">報表</button>
-      <button class="tab-btn" data-tab="settings">設定</button>
-    </nav>
+    <!-- 導覽 -->
+    <div class="tabs">
+      <div class="tab active" data-tab="book">記帳</div>
+      <div class="tab" data-tab="xfer">轉帳</div>
+      <div class="tab" data-tab="report">報表</div>
+      <div class="tab" data-tab="settings">設定</div>
+    </div>
 
     <!-- 記帳 -->
-    <section id="tab-record" class="tab-pane active">
+    <section id="sec-book" class="section active">
       <div class="card">
-        <h3>記帳</h3>
-        <div class="grid g2">
-          <input id="r-date" type="date" />
-          <select id="r-scope">
-            <option value="restaurant">餐廳</option>
-            <option value="personal-JACK">JACK</option>
-            <option value="personal-WAL">WAL</option>
-            <option value="personal-JW">J+W（共同，平均分攤）</option>
-          </select>
-          <select id="r-type">
-            <option value="expense">支出</option>
-            <option value="income">收入</option>
-          </select>
-          <div class="full"><select id="r-cat"></select></div>
-          <input id="r-amount" inputmode="decimal" placeholder="金額" />
-          <input id="r-merchant" placeholder="商家/店名（可留空）" />
-          <div class="full"><input id="r-note" placeholder="備註（可選）" /></div>
-          <div class="full">
-            <label class="seg"><input type="checkbox" id="r-reimburse" /> 報銷</label>
-            <label class="seg"><input type="file" id="r-receipt" accept="image/*" capture="environment" /> 上傳/拍照憑證</label>
-            <img id="r-preview" class="preview" alt="" />
+        <div class="grid">
+          <div>
+            <label>對象（餐廳 / JACK / WAL）</label>
+            <select id="owner">
+              <option value="RESTAURANT">餐廳</option>
+              <option value="JACK">JACK</option>
+              <option value="WAL">WAL</option>
+            </select>
           </div>
-          <button class="btn primary full" id="r-save">記錄</button>
+          <div>
+            <label>類型</label>
+            <select id="type">
+              <option value="expense">支出</option>
+              <option value="income">收入</option>
+            </select>
+          </div>
+          <div>
+            <label>分類</label>
+            <select id="cat"></select>
+          </div>
+          <div>
+            <label>金額</label>
+            <input id="amt" type="number" inputmode="decimal" placeholder="金額" />
+          </div>
+          <div>
+            <label>日期</label>
+            <input id="date" type="date" />
+          </div>
+          <div>
+            <label>備註（選填）</label>
+            <input id="note" placeholder="說明 / 商家 / 關鍵字" />
+          </div>
         </div>
+        <div style="margin-top:10px"><button id="btn-add" class="btn">記錄</button></div>
       </div>
+
       <div class="card">
-        <h3>本月明細</h3>
-        <ul id="recordList" class="list"></ul>
+        <div class="row"><div class="muted">本月筆數</div><div id="count-this-month">0</div></div>
       </div>
     </section>
 
     <!-- 轉帳 -->
-    <section id="tab-transfer" class="tab-pane">
+    <section id="sec-xfer" class="section">
       <div class="card">
-        <h3>轉帳／還款（from → to）</h3>
-        <div class="grid g2">
-          <select id="t-kind">
-            <option value="transfer">轉帳</option>
-            <option value="repay">還款</option>
-          </select>
-          <div class="full"></div>
-          <select id="t-from">
-            <option value="restaurant_cash">餐廳_現金</option>
-            <option value="restaurant_bank">餐廳_銀行</option>
-            <option value="JACK">JACK</option>
-            <option value="WAL">WAL</option>
-          </select>
-          <div class="arrow" aria-hidden="true">→</div>
-          <select id="t-to">
-            <option value="JACK">JACK</option>
-            <option value="WAL">WAL</option>
-            <option value="restaurant_cash">餐廳_現金</option>
-            <option value="restaurant_bank">餐廳_銀行</option>
-          </select>
-          <div class="full"><input id="t-amount" inputmode="decimal" placeholder="金額" /></div>
-          <button class="btn primary full" id="t-save">建立轉帳</button>
+        <div class="grid">
+          <div>
+            <label>用途</label>
+            <select id="xfer-kind">
+              <option value="transfer">轉帳（口袋間）</option>
+              <option value="settle">還款（沖銷報銷）</option>
+            </select>
+          </div>
+          <div>
+            <label>From → To</label>
+            <div class="controls">
+              <select id="from">
+                <option value="RESTAURANT_CASH">餐廳_現金</option>
+                <option value="RESTAURANT_BANK">餐廳_銀行</option>
+                <option value="JACK">JACK</option>
+                <option value="WAL">WAL</option>
+              </select>
+              <select id="to">
+                <option value="JACK">JACK</option>
+                <option value="WAL">WAL</option>
+                <option value="RESTAURANT_CASH">餐廳_現金</option>
+                <option value="RESTAURANT_BANK">餐廳_銀行</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>金額</label>
+            <input id="xfer-amt" type="number" inputmode="decimal" />
+          </div>
+          <div>
+            <label>日期</label>
+            <input id="xfer-date" type="date" />
+          </div>
+        </div>
+        <div style="margin-top:10px"><button id="btn-xfer" class="btn">建立轉帳</button></div>
+      </div>
+
+      <div class="card"><div id="xfer-list" class="muted">轉帳記錄（本月）</div></div>
+    </section>
+
+    <!-- 報表（P&L 可切月份與擁有者） -->
+    <section id="sec-report" class="section">
+      <div class="card">
+        <div class="grid">
+          <div>
+            <label>月份</label>
+            <input id="rep-month" type="month" />
+          </div>
+          <div>
+            <label>對象</label>
+            <select id="rep-owner">
+              <option value="RESTAURANT">餐廳（Restaurant）</option>
+              <option value="JACK">個人 P&L（JACK）</option>
+              <option value="WAL">個人 P&L（WAL）</option>
+            </select>
+          </div>
+        </div>
+        <div class="switches" style="margin-top:8px">
+          <label><input id="rep-by-kind" type="checkbox" /> 按類型小計</label>
+          <label><input id="rep-expand" type="checkbox" /> 明細展開</label>
         </div>
       </div>
+
+      <div id="report-box"></div>
+    </section>
+
+    <!-- 設定（示意：共享代號 + 分類管理 + 近超支門檻） -->
+    <section id="sec-settings" class="section">
       <div class="card">
-        <h3>轉帳紀錄（本月）</h3>
-        <ul id="transferList" class="list"></ul>
+        <div class="row" style="gap:10px;align-items:end">
+          <div style="flex:1">
+            <label>共享空間（輸入代號，兩支手機一樣即可共用）</label>
+            <input id="space-key" placeholder="例如 jackwal" />
+          </div>
+          <button id="btn-apply-space" class="btn" style="flex:0 0 160px">套用共享代號</button>
+        </div>
+        <div class="muted" style="margin-top:6px">同一個代號 = 同一份雲端資料（給 JACK 與 WAL 共用）。</div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="gap:10px">
+          <div style="flex:1">
+            <label>新分類（例：餐具耗材）</label>
+            <input id="new-cat-label" />
+          </div>
+          <div style="flex:0 0 200px">
+            <label>類別（Revenue/COGS/...）</label>
+            <select id="new-cat-kind">
+              <option value="revenue">revenue（營業收入）</option>
+              <option value="cogs">cogs（銷貨成本）</option>
+              <option value="personnel">personnel（人事費）</option>
+              <option value="utilities">utilities（水電/租金/網路）</option>
+              <option value="marketing">marketing（行銷）</option>
+              <option value="logistics">logistics（物流）</option>
+              <option value="admin">admin（行政/稅務/會計）</option>
+            </select>
+          </div>
+          <button id="btn-add-cat" class="btn" style="flex:0 0 120px">新增</button>
+        </div>
+        <div id="cat-list" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <label>近超支門檻（0~1，預設 0.9）</label>
+        <input id="near-threshold" type="number" min="0" max="1" step="0.01" />
+        <div style="margin-top:10px"><button id="btn-save-settings" class="btn">儲存設定</button></div>
       </div>
     </section>
 
-    <!-- 報表 -->
-    <section id="tab-report" class="tab-pane">
-      <div class="card">
-        <h3>P&L 報表</h3>
-        <div class="row">
-          <input type="month" id="rp-month" />
-          <label class="seg"><input type="checkbox" id="rp-expand" /> 明細展開</label>
-          <label class="seg"><input type="checkbox" id="rp-subtotal" checked /> 按類型小計</label>
-        </div>
-        <div id="plBox" class="report-box"></div>
-      </div>
-    </section>
-
-    <!-- 設定 -->
-    <section id="tab-settings" class="tab-pane">
-      <div class="card">
-        <h3>共享空間</h3>
-        <div class="grid g2">
-          <input id="room-key" placeholder="共享代號（例如：jackwal）" />
-          <button class="btn" id="room-apply">套用共享代號</button>
-        </div>
-        <p class="muted">同一個代號 = 同一份雲端資料（給 JACK 與 WAL 共用）。</p>
-      </div>
-
-      <div class="card">
-        <h3>分類管理（餐廳 + 個人）</h3>
-        <div class="grid g2">
-          <input id="c-new" placeholder="新分類（例：餐具耗材）" />
-          <select id="c-type">
-            <option value="revenue">revenue（營業收入）</option>
-            <option value="cogs">cogs（銷貨成本）</option>
-            <option value="personnel">personnel（人事費用）</option>
-            <option value="utilities">utilities（水電租金）</option>
-            <option value="marketing">marketing（行銷/平台）</option>
-            <option value="logistics">logistics（物流/抽成）</option>
-            <option value="admin">admin（行政/財務/法務）</option>
-            <option value="tax">tax（稅捐）</option>
-            <option value="transport">transport（交通/油資/停車）</option>
-            <option value="finance">finance（金流/銀行/交際）</option>
-            <option value="misc">misc（雜項）</option>
-          </select>
-          <button class="btn" id="c-add">新增</button>
-        </div>
-        <ul id="catList" class="cat-list"></ul>
-      </div>
-
-      <div class="card">
-        <h3>快取與資料</h3>
-        <div class="grid g2">
-          <button class="btn" id="btn-clear-cache">清快取（Cache/SW）</button>
-          <button class="btn danger" id="btn-wipe-all">清除所有資料（含記帳）</button>
-        </div>
-      </div>
-    </section>
+    <footer>極速記帳 v3.3 — build v17.FB-P&L</footer>
   </main>
 
-  <footer class="footer"><small>極速記帳 v3.3 build v17.1（Firebase）</small></footer>
-  <div id="toast" class="toast"></div>
-
-  <!-- App -->
-  <script src="app.js?v=17.1"></script>
+  <!-- 你的 Firebase CDN 初始化（保持你現有的 config） -->
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
