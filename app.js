@@ -1,4 +1,4 @@
-const { createApp, ref, computed } = Vue;
+const { createApp, ref, computed, nextTick } = Vue;
 
 window.__cf_toast__ = function(msg){
   try{
@@ -13,6 +13,7 @@ window.__cf_toast__ = function(msg){
 const storage = localforage.createInstance({ name:'cashflow', storeName:'records' });
 const receipts = localforage.createInstance({ name:'cashflow', storeName:'receipts' });
 const settingsStore = localforage.createInstance({ name:'cashflow', storeName:'settings' });
+
 function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2,8); }
 function monthKey(d){ return d.slice(0,7); }
 
@@ -100,16 +101,16 @@ function normalizeSettings(s){
 createApp({
   setup(){
     const tab = ref('input');
-    function setTab(t){ tab.value=t; window.scrollTo({top:0, behavior:'instant'}); }
+    const setTab = t=>{ tab.value=t; window.scrollTo({top:0, behavior:'instant'}); };
 
     const date = ref(new Date().toISOString().slice(0,10));
     const cursor = ref(monthKey(date.value));
     const currentMonthLabel = computed(()=>{ const [y,m]=cursor.value.split('-'); return `${y}年${m}月`; });
     const monthPicker = ref(null);
-    function openMonthPicker(){ try{ monthPicker.value && (monthPicker.value.showPicker ? monthPicker.value.showPicker() : monthPicker.value.click()); }catch{ monthPicker.value && monthPicker.value.click(); } }
-    function onMonthPicked(e){ const v=e.target.value; if(v && /\d{4}-\d{2}/.test(v)) cursor.value=v; }
-    function prevMonth(){ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m-2,1).toISOString().slice(0,7); }
-    function nextMonth(){ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m,1).toISOString().slice(0,7); }
+    const openMonthPicker = ()=>{ try{ monthPicker.value && (monthPicker.value.showPicker ? monthPicker.value.showPicker() : monthPicker.value.click()); }catch{ monthPicker.value && monthPicker.value.click(); } };
+    const onMonthPicked = e=>{ const v=e.target.value; if(v && /\d{4}-\d{2}/.test(v)) cursor.value=v; };
+    const prevMonth = ()=>{ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m-2,1).toISOString().slice(0,7); };
+    const nextMonth = ()=>{ const [y,m]=cursor.value.split('-').map(Number); cursor.value=new Date(y,m,1).toISOString().slice(0,7); };
 
     const settings = ref(normalizeSettings(null));
     const categories = ref(settings.value.categories);
@@ -140,8 +141,10 @@ createApp({
       if (q.autoSave) save(); else window.__cf_toast__('已帶入快捷內容');
     }
 
-    // 快捷管理（新增/刪除/排序）
+    // 快捷管理
+    const quickForm = ref(null);
     const newQuick = ref({ label:'', type:'expense', category:'餐飲', amount:0, mode:'personal-JACK', autoSave:false });
+
     function addQuick(){
       const q = { ...newQuick.value };
       if(!q.label || !q.category || !q.amount) return alert('請完整填寫快捷');
@@ -151,13 +154,23 @@ createApp({
       window.__cf_toast__('已新增/覆寫快捷');
       saveSettings();
     }
-    function editQuick(idx){ newQuick.value = { ...settings.value.quicks[idx] }; window.__cf_toast__('已帶入至表單，可修改後存回'); }
-    function delQuick(idx){ settings.value.quicks.splice(idx,1); window.__cf_toast__('已刪除快捷'); saveSettings(); }
+    function editQuick(idx){
+      newQuick.value = { ...settings.value.quicks[idx] };
+      window.__cf_toast__('已帶入至表單，可修改後存回');
+      nextTick(()=>{
+        try{
+          quickForm.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          quickForm.value?.classList.add('pulse');
+          setTimeout(()=> quickForm.value && quickForm.value.classList.remove('pulse'), 1500);
+        }catch(e){}
+      });
+    }
+    const delQuick = idx => { settings.value.quicks.splice(idx,1); saveSettings(); };
     function moveQuick(idx, dir){
       const j = idx + dir; if(j<0 || j>=settings.value.quicks.length) return;
       const arr = settings.value.quicks;
       const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
-      window.__cf_toast__('已調整排序'); saveSettings();
+      saveSettings();
     }
 
     function applyVendorRule(){
@@ -172,11 +185,10 @@ createApp({
     const sumExpense = computed(()=> monthRecords.value.filter(r=>r.type==='expense').reduce((a,b)=>a+b.amount,0));
     const net = computed(()=> sumIncome.value - sumExpense.value);
 
-    // 應付（轉帳自動沖銷）
-    const dueJACK = computed(()=> monthRecords.value.filter(r=>r.entity==='restaurant' && r.settlement && r.settlement.status!=='paid' && r.settlement.due_to==='JACK').reduce((a,b)=> a + (typeof b.settlement.remaining==='number' ? b.settlement.remaining : b.amount),0));
-    const dueWAL  = computed(()=> monthRecords.value.filter(r=>r.entity==='restaurant' && r.settlement && r.settlement.status!=='paid' && r.settlement.due_to==='WAL' ).reduce((a,b)=> a + (typeof b.settlement.remaining==='number' ? b.settlement.remaining : b.amount),0));
+    const dueJACK = computed(()=> monthRecords.value.filter(r=> r.entity==='restaurant' && r.settlement && r.settlement.status!=='paid' && r.settlement.due_to==='JACK').reduce((a,b)=> a + (typeof b.settlement.remaining==='number' ? b.settlement.remaining : b.amount),0));
+    const dueWAL  = computed(()=> monthRecords.value.filter(r=> r.entity==='restaurant' && r.settlement && r.settlement.status!=='paid' && r.settlement.due_to==='WAL' ).reduce((a,b)=> a + (typeof b.settlement.remaining==='number' ? b.settlement.remaining : b.amount),0));
 
-    // P&L（餐廳）+ 類型小計/明細
+    // P&L 與明細
     const restRecs = computed(()=> monthRecords.value.filter(r=> r.entity==='restaurant' && (r.type==='income' || r.type==='expense')));
     const pl = computed(()=>{
       const buckets = { revenue:0,cogs:0,personnel:0,utilities:0,marketing:0,logistics:0,admin:0 };
@@ -184,7 +196,7 @@ createApp({
         const t = catTypeOf(r.category) || (r.type==='income' ? 'revenue' : 'admin');
         if(r.type==='income'){
           if(t==='revenue') buckets.revenue += r.amount;
-          else buckets.admin += r.amount; // 其他收入暫歸 admin
+          else buckets.admin += r.amount;
         }else{
           if (t in buckets) buckets[t] += r.amount;
           else buckets.admin += r.amount;
@@ -196,11 +208,10 @@ createApp({
     });
     const plPerc = computed(()=>{
       const rev = pl.value.revenue || 1;
-      const pct = v => Math.round((v/rev)*1000)/10; // 1 位小數
+      const pct = v => Math.round((v/rev)*1000)/10;
       return { cogs: pct(pl.value.cogs), personnel: pct(pl.value.personnel), gp: pct(pl.value.gp) };
     });
 
-    // 類型設定/明細
     const plTypes = ref([
       { key:'revenue',   label:'Revenue（營業收入）', sign:'+' },
       { key:'cogs',      label:'COGS（銷貨成本）', sign:'-' },
@@ -211,28 +222,25 @@ createApp({
       { key:'admin',     label:'Admin（行政財務）', sign:'-' }
     ]);
     const expanded = ref({ revenue:false,cogs:false,personnel:false,utilities:false,marketing:false,logistics:false,admin:false });
-    function toggleDetail(k){ expanded.value[k] = !expanded.value[k]; }
+    const toggleDetail = k => expanded.value[k] = !expanded.value[k];
     const detailByType = computed(()=>{
       const map = { revenue:[],cogs:[],personnel:[],utilities:[],marketing:[],logistics:[],admin:[] };
       for(const r of restRecs.value){
         const t = catTypeOf(r.category) || (r.type==='income'?'revenue':'admin');
         map[t].push(r);
       }
-      // 依日期排序
       Object.keys(map).forEach(k=> map[k].sort((a,b)=> a.date<b.date?-1:1));
       return map;
     });
-    const typeTotals = computed(()=>{
-      return {
-        revenue: detailByType.value.revenue.filter(r=>r.type==='income').reduce((a,b)=>a+b.amount,0),
-        cogs:    detailByType.value.cogs.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
-        personnel: detailByType.value.personnel.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
-        utilities: detailByType.value.utilities.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
-        marketing: detailByType.value.marketing.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
-        logistics: detailByType.value.logistics.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
-        admin:     detailByType.value.admin.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0)
-      };
-    });
+    const typeTotals = computed(()=>({
+      revenue: detailByType.value.revenue.filter(r=>r.type==='income').reduce((a,b)=>a+b.amount,0),
+      cogs:    detailByType.value.cogs.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
+      personnel: detailByType.value.personnel.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
+      utilities: detailByType.value.utilities.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
+      marketing: detailByType.value.marketing.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
+      logistics: detailByType.value.logistics.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0),
+      admin:     detailByType.value.admin.reduce((a,b)=>a+(b.type==='expense'?b.amount:0),0)
+    }));
     const typeCounts = computed(()=>{
       const out={}; for(const t of plTypes.value){ out[t.key]=detailByType.value[t.key].length; } return out;
     });
@@ -310,7 +318,7 @@ createApp({
       }
     }
 
-    // CSV/同步（精簡）
+    // CSV / 同步（簡版）
     function parseCSVLine(line){
       const out=[]; let cur='',q=false;
       for(let i=0;i<line.length;i++){
@@ -396,35 +404,22 @@ createApp({
     load();
 
     return {
-      // tab
+      // tabs
       tab, setTab,
-      // month
+      // month switch
       currentMonthLabel, monthPicker, openMonthPicker, onMonthPicked, prevMonth, nextMonth,
       // input
-      type, mode, amountStr, category, vendor, note, date, isReimburse, onReceipt, hasReceipt, save, categories,
+      type, mode, amountStr, category, vendor, note, date, isReimburse, onReceipt, hasReceipt, save, categories, settings,
+      // quicks
+      newQuick, addQuick, editQuick, delQuick, moveQuick, applyQuick, quickForm,
       // transfer
       fromAccount, toAccount, transferAmountStr, transferDate, transferNote, saveTransfer, dueJACK, dueWAL,
       // report
       monthRecords, sumIncome, sumExpense, net, pl, plPerc,
       plTypes, expanded, toggleDetail, detailByType, typeTotals, typeCounts,
-      // quicks
-      settings, newQuick, addQuick, editQuick, delQuick, moveQuick, applyQuick,
-      // settings-page
-      newCat: ref({ label:'', type:'cogs' }), newCatP: ref({ label:'', type:'expense' }),
-      addCategory(group){
-        const obj = (group==='restaurant') ? this.newCat : this.newCatP;
-        if(!obj.label) return alert('請輸入分類名稱');
-        const arr = categories.value[group];
-        if(arr.find(x=>x.label===obj.label)) return alert('分類已存在');
-        arr.push({ label: obj.label, type: obj.type });
-        obj.label='';
-        window.__cf_toast__('已新增分類'); saveSettings();
-      },
-      removeCategory(group, idx){ categories.value[group].splice(idx,1); window.__cf_toast__('已刪除分類'); saveSettings(); },
-      // csv/sync
-      exportCSV, importCSV, pullRemote, pushRemote,
-      // misc
-      saveSettings, resetSettings
+      // csv/sync/settings
+      exportCSV, importCSV, pullRemote, pushRemote, saveSettings, resetSettings,
+      applyVendorRule
     };
   }
 }).mount('#app');
