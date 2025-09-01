@@ -1,18 +1,11 @@
-// v17.1（Firebase 版）：多人即時同步；日期+憑證；J+W 平分；轉帳類型；P&L 報表；房間代號共享
+/* ===============================
+   Firebase 初始化（CDN 版）
+   =============================== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-// ====== 小工具 ======
-const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
-const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); };
-const todayStr = () => { const d=new Date(); const mm=('0'+(d.getMonth()+1)).slice(-2), dd=('0'+d.getDate()).slice(-2); return `${d.getFullYear()}-${mm}-${dd}`; };
-const uid = () => Math.random().toString(36).slice(2) + Date.now();
-const touch = o => (o.updated_at = Date.now(), o);
-
-// ====== 本機快取鍵（離線時可用，啟動時先渲染）======
-const K = { ROOM:'cashflow_room', CATS:'cashflow_cats', RECS:'cashflow_records', TRANS:'cashflow_transfers' };
-
-// ====== Firebase 初始化（請換成你自己的設定）======
+// TODO: 改成你的專案設定
 const firebaseConfig = {
-  // ← 把這段換成你 Firebase Console 的 Web App 設定
     databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app/",
     apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
     authDomain: "cashflow-71391.firebaseapp.com",
@@ -22,302 +15,391 @@ const firebaseConfig = {
     appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
     measurementId: "G-G2DVG798M8"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
-// 匿名登入
-firebase.auth().signInAnonymously().catch(e=>console.warn('Anon auth error', e));
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
 
-// ====== 共享代號（房間）======
-let ROOM = localStorage.getItem(K.ROOM) || 'jackwal'; // 預設一個代號
-$('#room-key') && ($('#room-key').value = ROOM);
+/* ===============================
+   簡易 DOM utils
+   =============================== */
+const $  = (q)=> document.querySelector(q);
+const $$ = (q)=> Array.from(document.querySelectorAll(q));
+const fmt = (n)=> (Number(n)||0).toLocaleString();
+const todayStr = ()=> new Date().toISOString().slice(0,10);
+const monthStr = (d)=> `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 
-function path(p){ return `rooms/${ROOM}/${p}`; }    // 所有資料都放進 /rooms/{room}/... 底下
-const R = {
-  cats: () => db.ref(path('cats')),
-  records: () => db.ref(path('records')),
-  transfers: () => db.ref(path('transfers')),
+/* ===============================
+   全域狀態
+   =============================== */
+const state = {
+  spaceKey: localStorage.getItem('spaceKey') || 'default',
+  cats: [],        // {label, kind}
+  records: [],     // {owner, type, cat, amt, ts, note}
+  settings: { near: 0.9 }
 };
 
-// ====== 狀態（先用本機快取渲染，再掛雲端即時監聽）======
-const defaultCats = [
-  {label:'現場銷售',type:'revenue'},{label:'外送平台',type:'revenue'},{label:'批發/通路',type:'revenue'},{label:'其他收入',type:'revenue'},
-  {label:'食材-肉類',type:'cogs'},{label:'食材-蔬果',type:'cogs'},{label:'海鮮',type:'cogs'},{label:'調味/乾貨',type:'cogs'},
-  {label:'飲品原料',type:'cogs'},{label:'包材',type:'cogs'},{label:'清潔耗材',type:'cogs'},
-  {label:'正職薪資',type:'personnel'},{label:'勞健保',type:'personnel'},{label:'兼職時薪',type:'personnel'},{label:'獎金/三節',type:'personnel'},
-  {label:'租金',type:'utilities'},{label:'水費',type:'utilities'},{label:'電費',type:'utilities'},{label:'瓦斯',type:'utilities'},{label:'網路/手機',type:'utilities'},
-  {label:'廣告行銷',type:'marketing'},{label:'拍攝設計',type:'marketing'},{label:'活動攤費',type:'marketing'},{label:'外送平台抽成',type:'logistics'},
-  {label:'物流運費',type:'logistics'},{label:'記帳/法律',type:'admin'},{label:'設備購置',type:'admin'},{label:'維修',type:'admin'},{label:'工具器具',type:'admin'},
-  {label:'稅捐(5%)',type:'tax'},{label:'油資',type:'transport'},{label:'停車',type:'transport'},
-  {label:'金流手續費',type:'finance'},{label:'銀行手續費',type:'finance'},{label:'交際應酬',type:'finance'},
-  {label:'雜項',type:'misc'}
+function dbPath(key){ return `spaces/${state.spaceKey}/${key}`; }
+
+/* ===============================
+   分類：預設一份餐廳導向 + 個人常用
+   =============================== */
+const DEFAULT_CATS = [
+  // 餐廳收入
+  {label:'現場銷售', kind:'revenue'},
+  {label:'外送平台', kind:'revenue'},
+  {label:'批發/通路', kind:'revenue'},
+  {label:'其他收入', kind:'revenue'},
+  // 餐廳 COGS
+  {label:'食材-肉類', kind:'cogs'},{label:'食材-蔬果', kind:'cogs'},{label:'海鮮', kind:'cogs'},
+  {label:'調味/乾貨', kind:'cogs'},{label:'飲品原料', kind:'cogs'},{label:'包材', kind:'cogs'},
+  {label:'清潔耗材', kind:'cogs'},
+  // 人事/Utilities/行銷/物流/行政
+  {label:'正職薪資', kind:'personnel'},{label:'勞健保', kind:'personnel'},
+  {label:'租金', kind:'utilities'},{label:'水費', kind:'utilities'},{label:'電費', kind:'utilities'},{label:'網路/手機', kind:'utilities'},
+  {label:'廣告行銷', kind:'marketing'},{label:'拍攝設計', kind:'marketing'},
+  {label:'物流運費', kind:'logistics'},
+  {label:'稅捐(5%)', kind:'admin'},{label:'記帳/法律', kind:'admin'},
+  // 個人常用
+  {label:'薪資收入', kind:'revenue'},{label:'利息/股息', kind:'revenue'},
+  {label:'餐飲', kind:'admin'},{label:'交通', kind:'admin'},{label:'油資', kind:'admin'},
 ];
 
-let cats = JSON.parse(localStorage.getItem(K.CATS) || 'null') || defaultCats.slice();
-let records = JSON.parse(localStorage.getItem(K.RECS) || '[]');
-let transfers = JSON.parse(localStorage.getItem(K.TRANS) || '[]');
+/* P&L 欄位順序與名稱 */
+const PL_BUCKETS = ['revenue','cogs','personnel','utilities','marketing','logistics','admin'];
+const PL_TITLES = {
+  revenue:'營業收入 (Revenue)',
+  cogs:'銷貨成本 (COGS)',
+  personnel:'人事費 (Personnel)',
+  utilities:'水電/租金 (Utilities)',
+  marketing:'行銷 (Marketing)',
+  logistics:'物流 (Logistics)',
+  admin:'行政/稅務 (Admin)'
+};
 
-// ====== UI：標籤與頁籤 ======
-function activateTab(name){ $$('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-pane').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name)); }
-function bindTabs(){ $$('.tab-btn').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.tab))); }
+/* ===============================
+   啟動：訂閱雲端資料
+   =============================== */
+function subscribeSpace(){
+  onValue(ref(db, dbPath('cats')), (snap)=>{
+    state.cats = snap.exists() ? snap.val() : DEFAULT_CATS;
+    renderCatSelects();
+    renderCatList();
+    renderReport(); // 分類變動會影響 P&L
+  });
 
-// ====== 分類：渲染與管理 ======
-function buildCatOptions(){
-  const sel=$('#r-cat'); if(!sel) return; sel.innerHTML='';
-  const groups=['revenue','cogs','personnel','utilities','marketing','logistics','admin','tax','transport','finance','misc'];
-  groups.forEach(g=>{
-    const og=document.createElement('optgroup'); og.label=g;
-    cats.filter(c=>c.type===g).forEach(c=>{
-      const o=document.createElement('option'); o.value=c.label; o.textContent=`${c.label} (${c.type})`; og.appendChild(o);
-    });
-    if(og.children.length) sel.appendChild(og);
+  onValue(ref(db, dbPath('records')), (snap)=>{
+    state.records = snap.exists() ? snap.val() : [];
+    renderCountThisMonth();
+    renderReport();
+    renderXferList();
   });
-}
-function renderCatList(){
-  const ul=$('#catList'); if(!ul) return; ul.innerHTML='';
-  cats.forEach((c,i)=>{
-    const li=document.createElement('li'); li.className='cat-item';
-    li.innerHTML=`<div><b>${c.label}</b> <span class="muted">(${c.type})</span></div>
-      <div><button class="btn-link btn-danger" data-i="${i}" data-act="del">刪除</button></div>`;
-    ul.appendChild(li);
-  });
-}
-function bindCatEvents(){
-  $('#c-add').addEventListener('click',()=>{
-    const label=$('#c-new').value.trim(), type=$('#c-type').value;
-    if(!label) return toast('請輸入分類');
-    cats.push(touch({id: uid(), label, type}));
-    localStorage.setItem(K.CATS, JSON.stringify(cats));
-    R.cats().set(cats);
-    $('#c-new').value=''; renderCatList(); buildCatOptions();
-  });
-  $('#catList').addEventListener('click',e=>{
-    const b=e.target.closest('button[data-act="del"]'); if(!b) return;
-    cats.splice(Number(b.dataset.i),1);
-    localStorage.setItem(K.CATS, JSON.stringify(cats));
-    R.cats().set(cats);
-    renderCatList(); buildCatOptions();
+
+  onValue(ref(db, dbPath('settings')), (snap)=>{
+    state.settings = snap.exists() ? snap.val() : { near: 0.9 };
+    $('#near-threshold').value = state.settings.near ?? 0.9;
   });
 }
 
-// ====== 記帳：儲存（日期、憑證、J+W 平分）與列表 ======
-function fileToDataURL(file){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file); }); }
-async function saveRecord(){
-  const date=$('#r-date').value||todayStr();
-  const ts=new Date(date+'T00:00:00').getTime();
-  const scope=$('#r-scope').value, type=$('#r-type').value, category=$('#r-cat').value;
-  const amount=Number($('#r-amount').value||0);
-  const note=$('#r-note').value.trim(), merchant=$('#r-merchant').value.trim();
-  const reimburse=$('#r-reimburse').checked;
-  let receipt_url=''; const f=$('#r-receipt').files[0]; if(f) receipt_url=await fileToDataURL(f);
-  if(!amount||!category) return toast('請填金額與分類');
-
-  const pushRec=(s,amt)=>{
-    const rec = touch({ id: uid(), ts, date, scope:s, type, category, amount:amt, note, merchant, reimburse, receipt_url });
-    records.push(rec);
-  };
-
-  if(scope==='personal-JW'){
-    const half = Math.round((amount/2)*100)/100;
-    pushRec('personal-JACK', half);
-    pushRec('personal-WAL', amount-half);
-  }else{
-    pushRec(scope, amount);
-  }
-
-  localStorage.setItem(K.RECS, JSON.stringify(records));
-  await R.records().set(records);
-  // 清表單
-  $('#r-amount').value=''; $('#r-note').value=''; $('#r-merchant').value='';
-  $('#r-receipt').value=''; $('#r-preview').src='';
-  toast('已記錄'); renderRecordList(); renderPL();
-}
-function isYearMonth(ts, ym){ const d=new Date(ts); const [y,m]=ym.split('-').map(Number); return d.getFullYear()===y && (d.getMonth()+1)===m; }
-function renderRecordList(){
-  const ul=$('#recordList'); if(!ul) return;
-  const ym=$('#rp-month').value || new Date().toISOString().slice(0,7);
-  ul.innerHTML='';
-  records.filter(r=>isYearMonth(r.ts,ym)).sort((a,b)=>a.ts-b.ts).forEach(r=>{
-    const li=document.createElement('li'); li.className='list-item';
-    li.innerHTML=`<div>${r.date}｜${r.scope}｜${r.type}｜${r.category}｜${r.amount}
-      ${r.merchant?('｜'+r.merchant):''}${r.note?('｜'+r.note):''}${r.reimburse?'｜報銷':''}</div>
-      <div>${r.receipt_url?'<a href="'+r.receipt_url+'" target="_blank">憑證</a>':''}</div>`;
-    ul.appendChild(li);
-  });
-}
-
-// ====== 轉帳：類型、儲存與列表 ======
-function saveTransfer(){
-  const amount=Number($('#t-amount').value||0); if(!amount) return toast('請填金額');
-  const t = touch({
-    id: uid(),
-    ts: Date.now(),
-    kind: $('#t-kind').value, // transfer / repay
-    from: $('#t-from').value,
-    to: $('#t-to').value,
-    amount
-  });
-  transfers.push(t);
-  localStorage.setItem(K.TRANS, JSON.stringify(transfers));
-  R.transfers().set(transfers);
-  $('#t-amount').value='';
-  toast('已建立轉帳'); renderTransferList();
-}
-function renderTransferList(){
-  const ul=$('#transferList'); if(!ul) return;
-  const ym=$('#rp-month').value||new Date().toISOString().slice(0,7);
-  ul.innerHTML='';
-  transfers.filter(t=>isYearMonth(t.ts,ym)).sort((a,b)=>a.ts-b.ts).forEach(t=>{
-    const d=new Date(t.ts).toISOString().slice(0,10);
-    const tag = t.kind==='repay' ? '還款' : '轉帳';
-    const li=document.createElement('li'); li.className='list-item';
-    li.innerHTML=`<div>${d}｜<b>[${tag}]</b> ${t.from}→${t.to}｜${t.amount.toLocaleString()}</div>`;
-    ul.appendChild(li);
-  });
-}
-
-// ====== P&L 報表 ======
-function renderPL(){
-  const ym=$('#rp-month').value || new Date().toISOString().slice(0,7);
-  const box=$('#plBox'); if(!box) return;
-  const mapType = name => (cats.find(c=>c.label===name)||{}).type || 'misc';
-  const month = records.filter(r=>isYearMonth(r.ts,ym));
-  let revenue=0, buckets={cogs:0,personnel:0,utilities:0,marketing:0,logistics:0,admin:0,tax:0,transport:0,finance:0,misc:0};
-  month.forEach(r=>{ const t=mapType(r.category); if(r.type==='income') revenue+=r.amount; else buckets[t]=(buckets[t]||0)+r.amount; });
-  const cogs=buckets.cogs||0, gp=revenue-cogs, gm=revenue?(gp/revenue*100):0;
-  const opex=(buckets.personnel||0)+(buckets.utilities||0)+(buckets.marketing||0)+(buckets.logistics||0)+(buckets.admin||0)+(buckets.tax||0)+(buckets.transport||0)+(buckets.finance||0)+(buckets.misc||0);
-  const net = gp - opex;
-
-  let html = `<div class="kpi">
-    <div class="box"><div>Revenue 營收</div><b>${revenue.toLocaleString()}</b></div>
-    <div class="box"><div>Gross Profit 毛利</div><b>${gp.toLocaleString()}</b></div>
-    <div class="box"><div>Gross Margin 毛利率</div><b>${gm.toFixed(1)}%</b></div>
-  </div>
-  <table class="table">
-    <tr><th>區塊</th><th>金額</th></tr>
-    <tr><td><b>Revenue（營收）</b></td><td><b>${revenue.toLocaleString()}</b></td></tr>
-    <tr><td>COGS（銷貨成本）</td><td>${cogs.toLocaleString()}</td></tr>
-    <tr><td><b>Gross Profit（毛利）</b></td><td><b>${gp.toLocaleString()}</b></td></tr>
-    <tr><td>Personnel（人事）</td><td>${(buckets.personnel||0).toLocaleString()}</td></tr>
-    <tr><td>Utilities（水電租金）</td><td>${(buckets.utilities||0).toLocaleString()}</td></tr>
-    <tr><td>Marketing（行銷）</td><td>${(buckets.marketing||0).toLocaleString()}</td></tr>
-    <tr><td>Logistics（物流/抽成）</td><td>${(buckets.logistics||0).toLocaleString()}</td></tr>
-    <tr><td>Admin（行政/其他）</td><td>${(buckets.admin||0).toLocaleString()}</td></tr>
-    <tr><td>Tax（稅捐）</td><td>${(buckets.tax||0).toLocaleString()}</td></tr>
-    <tr><td>Transport（交通）</td><td>${(buckets.transport||0).toLocaleString()}</td></tr>
-    <tr><td>Finance（金流/銀行/交際）</td><td>${(buckets.finance||0).toLocaleString()}</td></tr>
-    <tr><td>Misc（雜項）</td><td>${(buckets.misc||0).toLocaleString()}</td></tr>
-    <tr><td><b>Net Income（淨利）</b></td><td><b>${net.toLocaleString()}</b></td></tr>
-  </table>`;
-
-  if($('#rp-subtotal')?.checked){
-    const agg={};
-    month.forEach(r=>{
-      const t=mapType(r.category); const key=(r.type==='income'?'revenue':t);
-      if(!agg[key]) agg[key]={};
-      agg[key][r.category]=(agg[key][r.category]||0)+(r.type==='income'?-r.amount:r.amount);
-    });
-    html+='<hr><b>小計（同類彙總）</b>';
-    Object.keys(agg).forEach(group=>{
-      html+=`<h4>${group}</h4><ul>`;
-      Object.entries(agg[group]).forEach(([k,v])=>{ html+=`<li>${k}：${v.toLocaleString()}</li>`; });
-      html+='</ul>';
-    });
-  }
-  if($('#rp-expand')?.checked){
-    html+='<hr><b>明細</b><ul>';
-    month.forEach(r=> html+=`<li>${r.date}｜${r.scope}｜${r.type}｜${r.category}｜${r.amount}${r.merchant?('｜'+r.merchant):''}${r.note?('｜'+r.note):''}${r.reimburse?'｜報銷':''}${r.receipt_url?'｜<a href="'+r.receipt_url+'" target="_blank">憑證</a>':''}</li>`);
-    html+='</ul>';
-  }
-  box.innerHTML = html;
-}
-
-// ====== 房間（共享代號）切換 ======
-async function applyRoom(){
-  const v = ($('#room-key').value || '').trim();
-  if(!v) return toast('請輸入共享代號');
-  ROOM = v;
-  localStorage.setItem(K.ROOM, ROOM);
-  toast(`已切換到共享代號：${ROOM}`);
-  // 重新掛載即時監聽
-  unbindRealtime();
-  bindRealtime();
-}
-
-// ====== 即時監聽（Firebase）======
-let offFns = [];
-function unbindRealtime(){
-  offFns.forEach(fn=>fn&&fn()); offFns = [];
-}
-function bindRealtime(){
-  // cats
-  const offCats = R.cats().on('value', s=>{
-    const v = s.val();
-    if(v){ cats = v; localStorage.setItem(K.CATS, JSON.stringify(cats)); buildCatOptions(); renderCatList(); }
-    else { // 雲端沒資料就寫入預設
-      cats = cats && cats.length ? cats : defaultCats.slice();
-      R.cats().set(cats);
+/* ===============================
+   UI 初始化與事件
+   =============================== */
+function initUI(){
+  // tabs
+  $$('.tab').forEach(t=>{
+    t.onclick = ()=>{
+      $$('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const name = t.dataset.tab;
+      $$('.section').forEach(s=> s.classList.remove('active'));
+      $('#sec-'+name).classList.add('active');
     }
   });
-  // records
-  const offRecs = R.records().on('value', s=>{
-    records = s.val() || []; localStorage.setItem(K.RECS, JSON.stringify(records)); renderRecordList(); renderPL();
-  });
-  // transfers
-  const offTrans = R.transfers().on('value', s=>{
-    transfers = s.val() || []; localStorage.setItem(K.TRANS, JSON.stringify(transfers)); renderTransferList();
-  });
-  offFns = [ ()=>R.cats().off('value', offCats), ()=>R.records().off('value', offRecs), ()=>R.transfers().off('value', offTrans) ];
+
+  // 日期預設
+  $('#date').value = todayStr();
+  $('#xfer-date').value = todayStr();
+
+  // 記帳
+  $('#btn-add').onclick = addRecord;
+
+  // 轉帳
+  $('#btn-xfer').onclick = addTransfer;
+
+  // 設定
+  $('#btn-apply-space').onclick = applySpaceKey;
+  $('#btn-add-cat').onclick = addCategory;
+  $('#btn-save-settings').onclick = saveSettings;
+
+  // 報表控制
+  const now = new Date();
+  $('#rep-month').value = monthStr(now);
+  $('#rep-owner').onchange = renderReport;
+  $('#rep-month').onchange = renderReport;
+  $('#rep-by-kind').onchange = renderReport;
+  $('#rep-expand').onchange = renderReport;
+
+  // Space key 欄位
+  $('#space-key').value = state.spaceKey;
+
+  renderCatSelects();
 }
 
-// ====== 快取/SW 控制 ======
-async function clearCacheOnly(){
-  if(!confirm('清快取（不刪除記帳資料）？')) return;
-  try{
-    if(caches){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
-    if(navigator.serviceWorker){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); }
-    toast('已清快取與 SW，請重新整理');
-  }catch(e){ toast('清快取失敗'); }
-}
-async function wipeAllData(){
-  if(!confirm('⚠️ 確認刪除「本機所有資料」？（含記帳/分類/轉帳）\n※ 雲端資料不會自動刪除')) return;
-  localStorage.clear();
-  if(indexedDB && indexedDB.databases){ const dbs=await indexedDB.databases(); for(const db of dbs){ if(db.name) try{ indexedDB.deleteDatabase(db.name);}catch(_){}}}
-  if(caches){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
-  if(navigator.serviceWorker){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); }
-  location.reload();
+/* ===============================
+   記帳 / 轉帳
+   =============================== */
+function addRecord(){
+  const owner = $('#owner').value;
+  const type  = $('#type').value; // 'income' | 'expense'
+  const cat   = $('#cat').value;
+  const amt   = Number($('#amt').value||0);
+  const date  = $('#date').value;
+  const note  = $('#note').value?.trim()||'';
+
+  if(!amt || !date || !cat){ alert('請輸入金額/日期/分類'); return; }
+
+  const ts = new Date(date+'T00:00:00').getTime();
+  const row = { owner, type, cat, amt, ts, note };
+
+  const rows = state.records.concat([row]);
+  set(ref(db, dbPath('records')), rows);
+  $('#amt').value = ''; $('#note').value='';
+  alert('已記錄');
 }
 
-// ====== 初始化 ======
-document.addEventListener('DOMContentLoaded', ()=>{
-  // tabs & default UI
-  bindTabs(); activateTab('record');
-  $('#r-date').value = todayStr();
-  buildCatOptions(); renderCatList(); renderRecordList(); renderTransferList(); renderPL();
+function addTransfer(){
+  const kind = $('#xfer-kind').value; // transfer | settle
+  const from = $('#from').value;
+  const to   = $('#to').value;
+  const amt  = Number($('#xfer-amt').value||0);
+  const date = $('#xfer-date').value;
+  if(!amt || !date){ alert('請輸入金額/日期'); return; }
+  const ts = new Date(date+'T00:00:00').getTime();
 
-  // 記帳上傳憑證預覽
-  $('#r-receipt').addEventListener('change', async e=>{
-    const f=e.target.files[0]; if(!f) return; const url=await fileToDataURL(f); $('#r-preview').src=url;
+  const rows = state.records.slice();
+
+  if(kind==='transfer'){
+    // 建兩筆：from 支出、to 收入（分類使用「行政」避免影響 COGS 比率）
+    rows.push({ owner: mapXferOwner(from), type:'expense', cat:'行政/稅務 (Admin)' , amt, ts, note:`轉出→${to}` });
+    rows.push({ owner: mapXferOwner(to),   type:'income',  cat:'行政/稅務 (Admin)' , amt, ts, note:`轉入←${from}` });
+  }else{
+    // 還款（沖銷報銷）：JACK / WAL -> 餐廳_銀行（視情況調整）
+    rows.push({ owner: mapXferOwner(from), type:'expense', cat:'行政/稅務 (Admin)', amt, ts, note:`還款→${to}` });
+    rows.push({ owner: mapXferOwner(to),   type:'income',  cat:'行政/稅務 (Admin)', amt, ts, note:`收款←${from}` });
+  }
+
+  set(ref(db, dbPath('records')), rows);
+  $('#xfer-amt').value='';
+  alert('已建立');
+}
+
+function mapXferOwner(x){
+  if(x==='JACK' || x==='WAL') return x;
+  return 'RESTAURANT'; // 餐廳_現金 / 銀行 都算餐廳
+}
+
+function renderXferList(){
+  const m = $('#rep-month').value || monthStr(new Date());
+  const [y,mm] = m.split('-').map(Number);
+  const range = monthRange(y, mm-1);
+  const rows = state.records.filter(r=> r.ts>=range.start && r.ts<range.end && /轉|還款|轉入|轉出|收款/.test(r.note||''));
+  $('#xfer-list').innerHTML = rows.length
+    ? rows.sort((a,b)=>a.ts-b.ts).map(r=>
+        `<div class="row">
+          <div class="muted" style="flex:0 0 8em">${new Date(r.ts).toLocaleDateString()}</div>
+          <div>${r.owner}｜${r.note||''}</div>
+          <div style="text-align:right;flex:0 0 7em">${(r.type==='income'?'+':'-')+fmt(r.amt)}</div>
+        </div>`
+      ).join('')
+    : '<span class="muted">（本月尚無轉帳/還款紀錄）</span>';
+}
+
+/* ===============================
+   分類管理 / 下拉
+   =============================== */
+function renderCatSelects(){
+  const sel = $('#cat');
+  sel.innerHTML = state.cats.map(c=>`<option value="${escapeHTML(c.label)}">${c.label}</option>`).join('');
+}
+function renderCatList(){
+  const box = $('#cat-list');
+  box.innerHTML = state.cats.map((c,i)=>`
+    <div class="row">
+      <div>${c.label} <span class="muted">(${c.kind})</span></div>
+      <button class="btn secondary" style="flex:0 0 70px" data-del="${i}">刪除</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const i = Number(btn.dataset.del);
+      const arr = state.cats.slice(); arr.splice(i,1);
+      set(ref(db, dbPath('cats')), arr);
+    };
   });
+}
+function addCategory(){
+  const label = $('#new-cat-label').value?.trim();
+  const kind  = $('#new-cat-kind').value;
+  if(!label) return alert('請輸入分類名稱');
+  const exists = state.cats.some(c=>c.label===label);
+  if(exists) return alert('已有同名分類');
+  const arr = state.cats.concat([{label, kind}]);
+  set(ref(db, dbPath('cats')), arr);
+  $('#new-cat-label').value='';
+}
 
-  // 動作事件
-  $('#r-save').addEventListener('click', saveRecord);
-  $('#t-save').addEventListener('click', saveTransfer);
-  $('#rp-month').value = new Date().toISOString().slice(0,7);
-  $('#rp-month').addEventListener('change', ()=>{ renderRecordList(); renderTransferList(); renderPL(); });
-  $('#rp-expand').addEventListener('change', renderPL);
-  $('#rp-subtotal').addEventListener('change', renderPL);
+function saveSettings(){
+  const near = Number($('#near-threshold').value||0.9);
+  update(ref(db, dbPath('settings')), { near });
+  alert('已儲存');
+}
 
-  // 分類管理
-  bindCatEvents();
+/* ===============================
+   共享空間（兩機同資料）
+   =============================== */
+function applySpaceKey(){
+  const key = $('#space-key').value?.trim();
+  if(!key) return alert('請輸入代號');
+  localStorage.setItem('spaceKey', key);
+  state.spaceKey = key;
+  subscribeSpace(); // 重新訂閱此空間
+  alert('已切換共享代號：'+key);
+}
 
-  // 快取/資料
-  $('#btn-clear-cache').addEventListener('click', clearCacheOnly);
-  $('#btn-wipe-all').addEventListener('click', wipeAllData);
+/* ===============================
+   報表（可切月份 / 可切擁有者）
+   =============================== */
+function monthRange(year, monthIdx){
+  // monthIdx: 0~11
+  const start = new Date(year, monthIdx, 1).getTime();
+  const end   = new Date(year, monthIdx+1, 1).getTime();
+  return { start, end };
+}
 
-  // 房間切換
-  $('#room-apply').addEventListener('click', applyRoom);
+function rowsByOwnerAndMonth(owner, y, m){
+  const {start, end} = monthRange(y, m);
+  return state.records
+    .filter(r => r.ts>=start && r.ts<end && (owner==='ALL' ? true : r.owner===owner))
+    .map(r=>{
+      const cat = state.cats.find(c=> c.label===r.cat);
+      return {...r, kind: cat?.kind || 'admin'};
+    });
+}
 
-  // 掛即時監聽
-  bindRealtime();
+function renderReport(){
+  const box = $('#report-box'); if(!box) return;
+
+  // 來源：UI
+  const m = $('#rep-month').value || monthStr(new Date());
+  const [yy, mm] = m.split('-').map(Number); // e.g. 2025, 08
+  const owner = $('#rep-owner').value;       // RESTAURANT | JACK | WAL
+  const expand = $('#rep-expand').checked;
+  const byKind = $('#rep-by-kind').checked;
+
+  const rows = rowsByOwnerAndMonth(owner, yy, mm-1);
+
+  // 累加
+  const sum = { revenue:0,cogs:0,personnel:0,utilities:0,marketing:0,logistics:0,admin:0 };
+  for(const r of rows){
+    if(r.type==='income' && r.kind==='revenue') sum.revenue += r.amt||0;
+    if(r.type==='expense'){
+      if(PL_BUCKETS.includes(r.kind)) sum[r.kind]+=r.amt||0;
+      else sum.admin+=r.amt||0;
+    }
+  }
+
+  const grossProfit = sum.revenue - sum.cogs;
+  const otherOpex   = sum.personnel + sum.utilities + sum.marketing + sum.logistics + sum.admin;
+  const netProfit   = grossProfit - otherOpex;
+  const cogsPct     = sum.revenue ? sum.cogs / sum.revenue : 0;
+  const pplPct      = sum.revenue ? sum.personnel / sum.revenue : 0;
+
+  const titleWho = owner==='RESTAURANT' ? '餐廳' : (owner==='JACK' ? 'JACK（個人）' : 'WAL（個人）');
+  const titleMonth = `${yy}年${String(mm).padStart(2,'0')}月`;
+
+  // 簡表
+  const simpleIncome  = sum.revenue;
+  const simpleExpense = sum.cogs + otherOpex;
+  const simpleNet     = simpleIncome - simpleExpense;
+
+  // 依類型小計
+  const kindHTML = `
+    <div class="row"><div>${PL_TITLES.revenue}</div><div style="text-align:right">${fmt(sum.revenue)}</div></div>
+    <div class="row"><div>${PL_TITLES.cogs}</div><div style="text-align:right">-${fmt(sum.cogs)}　<span class="muted">COGS比率：${(cogsPct*100).toFixed(1)}%</span></div></div>
+    <hr/>
+    <div class="row"><div><b>毛利 (Gross Profit)</b></div><div style="text-align:right"><b>${fmt(grossProfit)}</b></div></div>
+    <div class="row"><div>${PL_TITLES.personnel}</div><div style="text-align:right">-${fmt(sum.personnel)}　<span class="muted">占比：${(pplPct*100).toFixed(1)}%</span></div></div>
+    <div class="row"><div>${PL_TITLES.utilities}</div><div style="text-align:right">-${fmt(sum.utilities)}</div></div>
+    <div class="row"><div>${PL_TITLES.marketing}</div><div style="text-align:right">-${fmt(sum.marketing)}</div></div>
+    <div class="row"><div>${PL_TITLES.logistics}</div><div style="text-align:right">-${fmt(sum.logistics)}</div></div>
+    <div class="row"><div>${PL_TITLES.admin}</div><div style="text-align:right">-${fmt(sum.admin)}</div></div>
+    <hr/>
+    <div class="row"><div><b>淨利 (Net Profit)</b></div><div style="text-align:right"><b>${fmt(netProfit)}</b></div></div>
+  `;
+
+  // 明細展開
+  let detailsHTML = '';
+  if(expand){
+    const groups = {};
+    for(const r of rows){
+      const key = r.type==='income' ? 'revenue' : r.kind;
+      (groups[key] ||= []).push(r);
+    }
+    detailsHTML = PL_BUCKETS
+      .filter(k => groups[k]?.length)
+      .map(k=>{
+        const lines = groups[k].sort((a,b)=>a.ts-b.ts).map(r=>`
+          <div class="row" style="font-size:14px">
+            <div class="muted" style="flex:0 0 8.5em">${new Date(r.ts).toLocaleDateString()}</div>
+            <div>${r.cat}${r.note?`｜${escapeHTML(r.note)}`:''}</div>
+            <div style="text-align:right;flex:0 0 7em">${(r.type==='income'?'+':'-')+fmt(r.amt)}</div>
+          </div>
+        `).join('');
+        const subtotal = (k==='revenue'?sum.revenue:sum[k])||0;
+        return `
+          <div class="card" style="background:#f9fbfb">
+            <div class="row" style="font-weight:700"><div>${PL_TITLES[k]}</div><div style="text-align:right">${fmt(subtotal)}</div></div>
+            <div style="margin-top:6px">${lines}</div>
+          </div>
+        `;
+      }).join('');
+  }
+
+  box.innerHTML = `
+    <div class="card">
+      <div class="row"><div class="muted">${titleMonth}｜${titleWho}</div><div></div></div>
+      <div class="row"><div>收入（本月）</div><b>+${fmt(simpleIncome)}</b></div>
+      <div class="row"><div>支出（本月）</div><b>-${fmt(simpleExpense)}</b></div>
+      <hr/>
+      <div class="row"><div>結餘</div><b>${fmt(simpleNet)}</b></div>
+    </div>
+
+    <div class="card" style="background:#eef6f6">
+      <div style="font-weight:700;margin-bottom:6px">P&L（損益表）</div>
+      ${kindHTML}
+    </div>
+
+    ${detailsHTML}
+  `;
+}
+
+/* ===============================
+   其它
+   =============================== */
+function renderCountThisMonth(){
+  const now = new Date();
+  const {start,end} = monthRange(now.getFullYear(), now.getMonth());
+  const n = state.records.filter(r=> r.ts>=start && r.ts<end).length;
+  $('#count-this-month').textContent = n;
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
+
+/* ===============================
+   啟動
+   =============================== */
+window.addEventListener('DOMContentLoaded', ()=>{
+  initUI();
+  subscribeSpace(); // 載入目前 spaceKey 的雲端資料
 });
