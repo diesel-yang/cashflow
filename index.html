@@ -4,10 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
-  <link rel="stylesheet" href="style.css?v=17.0" />
+
+  <!-- 样式 -->
+  <link rel="stylesheet" href="style.css?v=17.1" />
+
+  <!-- Firebase（Compat 版，最省事） -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
   <header class="app-bar"><div class="title">極速記帳 v3.3</div></header>
+
   <main>
     <nav class="tabbar top">
       <button class="tab-btn active" data-tab="record">記帳</button>
@@ -34,7 +42,7 @@
           </select>
           <div class="full"><select id="r-cat"></select></div>
           <input id="r-amount" inputmode="decimal" placeholder="金額" />
-          <input id="r-merchant" placeholder="商家/店名（自動分類，可留空）" />
+          <input id="r-merchant" placeholder="商家/店名（可留空）" />
           <div class="full"><input id="r-note" placeholder="備註（可選）" /></div>
           <div class="full">
             <label class="seg"><input type="checkbox" id="r-reimburse" /> 報銷</label>
@@ -55,13 +63,18 @@
       <div class="card">
         <h3>轉帳／還款（from → to）</h3>
         <div class="grid g2">
+          <select id="t-kind">
+            <option value="transfer">轉帳</option>
+            <option value="repay">還款</option>
+          </select>
+          <div class="full"></div>
           <select id="t-from">
             <option value="restaurant_cash">餐廳_現金</option>
             <option value="restaurant_bank">餐廳_銀行</option>
             <option value="JACK">JACK</option>
             <option value="WAL">WAL</option>
           </select>
-          <span class="arrow">→</span>
+          <div class="arrow" aria-hidden="true">→</div>
           <select id="t-to">
             <option value="JACK">JACK</option>
             <option value="WAL">WAL</option>
@@ -94,6 +107,15 @@
     <!-- 設定 -->
     <section id="tab-settings" class="tab-pane">
       <div class="card">
+        <h3>共享空間</h3>
+        <div class="grid g2">
+          <input id="room-key" placeholder="共享代號（例如：jackwal）" />
+          <button class="btn" id="room-apply">套用共享代號</button>
+        </div>
+        <p class="muted">同一個代號 = 同一份雲端資料（給 JACK 與 WAL 共用）。</p>
+      </div>
+
+      <div class="card">
         <h3>分類管理（餐廳 + 個人）</h3>
         <div class="grid g2">
           <input id="c-new" placeholder="新分類（例：餐具耗材）" />
@@ -115,35 +137,20 @@
         <ul id="catList" class="cat-list"></ul>
       </div>
 
-      <div class="card" id="quick-manage">
-        <h3>快捷管理</h3>
-        <div id="quickForm" class="quick-form">
-          <input id="qLabel" placeholder="名稱（例：午餐 120）" />
-          <select id="qType"><option value="expense">支出</option><option value="income">收入</option></select>
-          <input id="qCat" placeholder="分類（例：餐飲／外送平台）" />
-          <input id="qAmt" inputmode="decimal" placeholder="金額" />
-          <select id="qMode">
-            <option value="personal-JACK">JACK</option>
-            <option value="personal-WAL">WAL</option>
-            <option value="restaurant">餐廳</option>
-            <option value="personal-JW">J+W</option>
-          </select>
-          <label class="seg"><input type="checkbox" id="qAuto" /> 一鍵入帳</label>
-          <button class="btn" id="qSave">新增/覆寫</button>
-        </div>
-        <ul class="quick-list" id="quickList"></ul>
-      </div>
-
       <div class="card">
-        <h3>系統</h3>
-        <button class="btn danger" id="btn-reset">🔄 重置所有資料</button>
-        <p class="muted">清除 LocalStorage / IndexedDB / Cache / Service Worker，並重新載入。</p>
+        <h3>快取與資料</h3>
+        <div class="grid g2">
+          <button class="btn" id="btn-clear-cache">清快取（Cache/SW）</button>
+          <button class="btn danger" id="btn-wipe-all">清除所有資料（含記帳）</button>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="footer"><small>極速記帳 v3.3 build v17</small></footer>
+  <footer class="footer"><small>極速記帳 v3.3 build v17.1（Firebase）</small></footer>
   <div id="toast" class="toast"></div>
-  <script src="app.js?v=17.0"></script>
+
+  <!-- App -->
+  <script src="app.js?v=17.1"></script>
 </body>
 </html>
