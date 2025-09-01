@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#208b8c">
-  <title>極速記帳 v3.3（餐廳＋個人 JACK/WAL）</title>
+  <title>極速記帳 v3.3</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -13,10 +13,11 @@
 <body>
   <div id="app">
     <header class="app-bar">
-      <div class="title">極速記帳 v3.3（餐廳＋個人 JACK/WAL）</div>
+      <div class="title">極速記帳 v3.3</div>
       <div class="month-switcher">
         <button @click="prevMonth">‹</button>
-        <span>{{ currentMonthLabel }}</span>
+        <button class="month-label" @click="openMonthPicker">{{ currentMonthLabel }} 📅</button>
+        <input type="month" ref="monthPicker" @change="onMonthPicked" style="position:absolute;opacity:0;width:0;height:0;padding:0;margin:0;border:0">
         <button @click="nextMonth">›</button>
       </div>
     </header>
@@ -29,6 +30,7 @@
             <option value="restaurant">餐廳</option>
             <option value="personal-JACK">JACK</option>
             <option value="personal-WAL">WAL</option>
+            <option value="personal-JW">J+W（共同）</option>
           </select>
           <select v-model="payAccount" class="select">
             <option>現金</option><option>銀行</option><option>信用卡</option><option>電子支付</option>
@@ -256,7 +258,7 @@
         <details>
           <summary><b>CSV 匯入</b>（支援本系統匯出欄位）</summary>
           <input type="file" accept=".csv,text/csv" @change="importCSV">
-          <p class="hint">合併策略：若 CSV 行含 id 並且本機同 id 已存在 → 以較新的日期覆寫；否则新增。</p>
+          <p class="hint">合併策略：若 CSV 行含 id 並且本機同 id 已存在 → 以較新的日期覆寫；否則新增。</p>
         </details>
 
         <details>
@@ -289,14 +291,13 @@
 
   <!-- libs -->
   <script defer src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
-  <script>if(!window.Vue){var s=document.createElement('script');s.defer=true;s.src='https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js';document.head.appendChild(s);}</script>
   <script defer src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script defer src="app.js"></script>
   <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=15');
+      navigator.serviceWorker.register('./sw.js?v=16');
     });
   }
   </script>

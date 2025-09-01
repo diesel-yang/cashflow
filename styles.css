@@ -3,6 +3,7 @@
 .title{font-weight:700;letter-spacing:1px}
 .month-switcher{display:flex;align-items:center;gap:8px}
 .month-switcher button{border:none;background:rgba(255,255,255,.2);color:#fff;padding:6px 10px;border-radius:8px}
+.month-label{border:none;background:rgba(255,255,255,.2);color:#fff;padding:6px 10px;border-radius:8px}
 main{padding:12px}
 .card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:14px}
 .mode-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap}

@@ -3,6 +3,8 @@ const storage = localforage.createInstance({ name: 'cashflow', storeName: 'recor
 const receipts = localforage.createInstance({ name: 'cashflow', storeName: 'receipts' });
 const settingsStore = localforage.createInstance({ name: 'cashflow', storeName: 'settings' });
 
+function deepPlain(obj){ return JSON.parse(JSON.stringify(obj)); }
+
 const DEFAULT_CATS_RESTAURANT = ['現場銷售','外送平台','批發/通路','其他收入','食材-肉類','食材-蔬果','海鮮','調味/乾貨','飲品原料','包材','清潔耗材','正職薪資','兼職時薪','勞健保','獎金/三節','租金','水費','電費','瓦斯','網路/手機','設備購置','維修','工具器具','外送平台抽成','廣告行銷','拍攝設計','活動攤費','物流運費','油資','停車','稅捐(5%)','記帳/法律','金流手續費','銀行手續費','交際應酬','雜項'];
 const DEFAULT_CATS_PERSONAL   = ['食','住-房租/貸','住-水電網路','行-交通','行-油資','行-停車','育樂','醫療','3C/家居','稅費','投資/儲蓄','收入-薪資','收入-其他'];
 
@@ -18,11 +20,9 @@ const DEFAULT_PL_MAP = {};
 
 function uuid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(0,8)}
 
-function deepPlain(obj){return JSON.parse(JSON.stringify(obj));}
-
 createApp({
   setup(){
-    const version = ref("極速記帳 v3.3 fixed build " + new Date().toISOString().slice(0,10));
+    const version = ref("極速記帳 v3.3 build v16 2025-09-01");
 
     const tab = ref('input');
     const type = ref('expense');
@@ -65,6 +65,7 @@ createApp({
 
     function monthKey(d){ return d.slice(0,7) }
     const cursor = ref(monthKey(date.value));
+    const monthPicker = ref(null);
     const currentMonthLabel = computed(() => { const [y,m] = cursor.value.split('-'); return `${y}年${m}月`; });
 
     const filterEntity = ref('all');
@@ -163,11 +164,9 @@ createApp({
       const amt = Number(amountStr.value);
       if(!amt || amt <= 0){ alert('請輸入金額'); return; }
 
-      const rec = {
-        id: uuid(),
+      // 共用：先建原始基底物件
+      const base = {
         type: type.value,
-        entity: mode.value==='restaurant' ? 'restaurant' : 'personal',
-        person: mode.value==='personal-JACK' ? 'JACK' : (mode.value==='personal-WAL' ? 'WAL' : null),
         category: category.value,
         amount: Math.round(amt),
         date: date.value,
@@ -176,22 +175,49 @@ createApp({
         note: note.value || ''
       };
 
-      if (isReimburse.value && rec.entity==='restaurant' && rec.type==='expense' && (rec.pay_account==='JACK先墊' || rec.pay_account==='WAL先墊')) {
-        rec.link_id = uuid();
-        rec.settlement = { status:'unpaid', due_to: rec.pay_account.includes('JACK')?'JACK':'WAL', remaining: rec.amount };
-      }
+      // 共同（J+W）→ 自動拆成 JACK/WAL 兩筆
+      if(mode.value==='personal-JW'){
+        const jackAmt = Math.floor(base.amount/2);
+        const walAmt = base.amount - jackAmt;
+        const recJ = { id: uuid(), ...base, entity:'personal', person:'JACK', amount: jackAmt };
+        const recW = { id: uuid(), ...base, entity:'personal', person:'WAL',  amount: walAmt };
+        await storage.setItem(recJ.id, recJ);
+        await storage.setItem(recW.id, recW);
+        allRecords.value.push(recJ, recW);
+        if(receiptDataUrl.value){
+          await receipts.setItem(recJ.id, receiptDataUrl.value);
+          await receipts.setItem(recW.id, receiptDataUrl.value);
+          recJ.receipt_id = recJ.id; recW.receipt_id = recW.id;
+          await storage.setItem(recJ.id, recJ); await storage.setItem(recW.id, recW);
+        }
+        // 預算提醒各做一次
+        checkBudgetAlerts({ type: recJ.type, entity: recJ.entity, person: recJ.person, category: recJ.category, amount: recJ.amount, date: recJ.date });
+        checkBudgetAlerts({ type: recW.type, entity: recW.entity, person: recW.person, category: recW.category, amount: recW.amount, date: recW.date });
+      }else{
+        const rec = {
+          id: uuid(),
+          ...base,
+          entity: mode.value==='restaurant' ? 'restaurant' : 'personal',
+          person: mode.value==='personal-JACK' ? 'JACK' : (mode.value==='personal-WAL' ? 'WAL' : null),
+        };
 
-      await storage.setItem(rec.id, rec);
-      allRecords.value.push(rec);
+        if (isReimburse.value && rec.entity==='restaurant' && rec.type==='expense' && (rec.pay_account==='JACK先墊' || rec.pay_account==='WAL先墊')) {
+          rec.link_id = uuid();
+          rec.settlement = { status:'unpaid', due_to: rec.pay_account.includes('JACK')?'JACK':'WAL', remaining: rec.amount };
+        }
 
-      if(receiptDataUrl.value){
-        await receipts.setItem(rec.id, receiptDataUrl.value);
-        rec.receipt_id = rec.id;
         await storage.setItem(rec.id, rec);
+        allRecords.value.push(rec);
+
+        if(receiptDataUrl.value){
+          await receipts.setItem(rec.id, receiptDataUrl.value);
+          rec.receipt_id = rec.id;
+          await storage.setItem(rec.id, rec);
+        }
+        checkBudgetAlerts(rec);
       }
 
       amountStr.value=''; note.value=''; vendor.value=''; receiptDataUrl.value=null;
-      checkBudgetAlerts(rec);
       toast('已記錄');
     }
 
@@ -229,6 +255,14 @@ createApp({
       const [y,m] = cursor.value.split('-').map(Number);
       const d = new Date(y, m-2, 1);
       cursor.value = d.toISOString().slice(0,7);
+    }
+    function openMonthPicker(){
+      try{ monthPicker.value && monthPicker.value.showPicker ? monthPicker.value.showPicker() : monthPicker.value && monthPicker.value.click(); }
+      catch(e){ monthPicker.value && monthPicker.value.click(); }
+    }
+    function onMonthPicked(e){
+      const v = e.target.value;
+      if(v && /\d{4}-\d{2}/.test(v)){ cursor.value = v; }
     }
     function nextMonth(){
       const [y,m] = cursor.value.split('-').map(Number);
@@ -334,7 +368,7 @@ createApp({
         ];
         lines.push(row.map(v => (typeof v==='string' && (v.includes(' ')||v.includes(','))) ? `"${v.replace(/"/g,'""')}"` : v).join(','));
       }
-      const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+      const blob = new Blob([lines.join('\\n')], {type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url;
       a.download = scope==='month' ? (`cashflow_${cursor.value}.csv`) : ('cashflow_all.csv');
@@ -345,7 +379,7 @@ createApp({
       const f = evt.target.files && evt.target.files[0];
       if(!f) return;
       const text = await f.text();
-      const rows = text.split(/\r?\n/).filter(x=>x.trim().length>0);
+      const rows = text.split(/\\r?\\n/).filter(x=>x.trim().length>0);
       const header = parseCSVLine(rows.shift());
       const idx = (name)=> header.indexOf(name);
       let imported = 0, updated=0, skipped=0;
@@ -497,7 +531,11 @@ createApp({
       }
     }
 
-    async function saveSettings(){ const plain = deepPlain(settings.value); await settingsStore.setItem('settings', plain); toast('設定已儲存'); }
+    async function saveSettings(){ 
+      const plain = deepPlain(settings.value); 
+      await settingsStore.setItem('settings', plain); 
+      toast('設定已儲存'); 
+    }
 
     // Charts
     let pieChart = null, lineChart = null, plBarChart = null;
@@ -531,22 +569,13 @@ createApp({
       }
     }
 
-    function toast(msg){
-      const t = document.createElement('div');
-      t.className = 'toast';
-      t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(()=>{ t.classList.add('show'); }, 10);
-      setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 1800);
-    }
-
     load();
 
     return { 
       version,
       tab, type, amountStr, category, note, vendor, date, payAccount, isReimburse, mode, categories, currentMonthLabel,
       quicks, save, applyQuick, applyVendorRule, onReceipt, hasReceipt,
-      prevMonth, nextMonth,
+      prevMonth, nextMonth, openMonthPicker, onMonthPicked, monthPicker,
       filterEntity, filterPerson, netTransfers, monthRecords, filteredMonthRecords, sumIncome, sumExpense, net,
       dueJACK, dueWAL, drawCharts, settle, viewReceipt,
       fromAccount, toAccount, transferAmountStr, transferDate, transferNote, saveTransfer,
