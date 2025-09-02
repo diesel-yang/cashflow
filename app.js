@@ -127,15 +127,26 @@ const state = {
 /* =========================
    Firebase 啟動（可選）
    ========================= */
-let fb = { app:null, db:null, rtdb:null, ref:null, onValue:null, get: null, set: null, update:null };
+let fb = { app:null, rtdb:null, ref:null, onValue:null, get:null, set:null, update:null, auth:null };
+
 async function initFirebase(){
   if (!window.firebaseConfig) { state.useCloud = false; return; }
-  // 走 CDN v9 模組化（由 index.html 掛到 window.firebase / window.firebaseDatabase）
   const { initializeApp } = window.firebase;
   const { getDatabase, ref, onValue, get, set, update } = window.firebaseDatabase;
+  const { getAuth, signInAnonymously } = window.firebaseAuth;
+
   fb.app = initializeApp(window.firebaseConfig);
   fb.rtdb = getDatabase(fb.app);
   fb.ref = ref; fb.onValue = onValue; fb.get = get; fb.set = set; fb.update = update;
+
+  // ★ 這行很關鍵：規則要求 auth != null，所以我們先做匿名登入
+  fb.auth = getAuth(fb.app);
+  try {
+    await signInAnonymously(fb.auth);
+    console.log('[auth] anonymous signed in');
+  } catch (e) {
+    console.error('[auth] anonymous sign-in failed', e);
+  }
 }
 
 /* =========================
@@ -174,7 +185,7 @@ function loadLocal(){
    ========================= */
 function cloudPath(){
   const s = (state.space||'default').trim().toLowerCase();
-  return `cashflow/${s}`;
+  return `rooms/${s}`;   // ← 從 cashflow/{space} 改回 rooms/{space}
 }
 async function pullCloud(){
   if(!state.useCloud || !fb.rtdb) return;
