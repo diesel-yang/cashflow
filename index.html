@@ -11,24 +11,28 @@
   </style>
 
   <!-- Firebase（以 ES Modules 形式載入，並把需要的 API 掛到 window，配合 app.js 寫法） -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-    // 供 app.js 取得
-    window.firebase        = { initializeApp };
-    window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
-    // 雲端設定（你提供的專案憑證）
-    window.firebaseConfig = {
-      apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
-      authDomain: "cashflow-71391.firebaseapp.com",
-      databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "cashflow-71391",
-      storageBucket: "cashflow-71391.firebasestorage.app",
-      messagingSenderId: "204834375477",
-      appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
-      measurementId: "G-G2DVG798M8"
-    };
-  </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+  import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";  <!-- 新增 -->
+
+  // 供 app.js 取得
+  window.firebase         = { initializeApp };
+  window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
+  window.firebaseAuth     = { getAuth, signInAnonymously };  // 新增
+
+  // 你的專案設定（保持不變）
+  window.firebaseConfig = {
+    apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
+    authDomain: "cashflow-71391.firebaseapp.com",
+    databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "cashflow-71391",
+    storageBucket: "cashflow-71391.firebasestorage.app",
+    messagingSenderId: "204834375477",
+    appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
+    measurementId: "G-G2DVG798M8"
+  };
+</script>
 </head>
 <body>
   <div class="topbar">
