@@ -740,7 +740,7 @@ async function init(){
     toast('已建立轉帳（若為還款已自動沖銷）');
   });
 
-     // === 記帳頁：支出 / 收入 ===
+  // === 記帳頁：支出 / 收入 ===
   $('#rec-expense')?.addEventListener('click', async ()=>{
     const owner = $('#rec-owner')?.value || 'RESTAURANT';
     const who   = $('#rec-who')?.value   || 'JACK';
@@ -748,9 +748,9 @@ async function init(){
     const amt   = Number($('#rec-amt')?.value || 0);
     const note  = ($('#rec-note')?.value || '').trim();
     if (!cat || !amt){ toast('請填「分類」與「金額」'); return; }
+    console.log('[record] expense click', {owner,who,cat,amt,note});
     await window.CF.addExpense({ owner, who, cat, amt, note });
     $('#rec-amt').value=''; $('#rec-note').value='';
-    toast('已記錄支出');
   });
 
   $('#rec-income')?.addEventListener('click', async ()=>{
@@ -760,9 +760,9 @@ async function init(){
     const amt   = Number($('#rec-amt')?.value || 0);
     const note  = ($('#rec-note')?.value || '').trim();
     if (!cat || !amt){ toast('請填「分類」與「金額」'); return; }
+    console.log('[record] income click', {owner,who,cat,amt,note});
     await window.CF.addIncome({ owner, who, cat, amt, note });
     $('#rec-amt').value=''; $('#rec-note').value='';
-    toast('已記錄收入');
   });
 
   // 報表切換
