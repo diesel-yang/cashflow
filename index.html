@@ -4,14 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
-
-  <!-- 單一版型樣式：合併且精簡，避免與其他 CSS 衝突 -->
   <style>
     * { box-sizing: border-box; }
     html, body { margin:0; padding:0; height:100%; background:#f3f7f7; color:#173131;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial,sans-serif; }
-
-    /* Top bar + Month nav */
     .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
       padding:12px 14px; background:#1a7b7b; color:#fff; }
     .brand { font-weight:800; letter-spacing:.5px; }
@@ -19,38 +15,48 @@
     .icon-btn { border:0; border-radius:10px; background:#147171; color:#fff; width:34px; height:34px; font-size:18px; line-height:34px; cursor:pointer; }
     .icon-btn:active { transform:translateY(1px); }
     .month-label { background:#198f8f; padding:6px 10px; border-radius:10px; font-weight:700; }
-
-    /* Tabs */
     .tabs { display:flex; gap:10px; padding:10px; background:#e8f2f2; justify-content:space-around; position:sticky; top:54px; z-index:9; }
-    .tab { flex:1; border:0; border-radius:10px; padding:12px 10px; cursor:pointer; background:#fff; font-weight:700; color:#166; letter-spacing:.5px;
-      box-shadow:0 1px 0 rgba(0,0,0,.03); text-align:center; }
+    .tab { flex:1; border:0; border-radius:10px; padding:12px 10px; cursor:pointer; background:#fff; font-weight:700; color:#166; text-align:center;
+      box-shadow:0 1px 0 rgba(0,0,0,.03); }
     .tab--active { background:#1a7b7b; color:#fff; }
-
-    /* Layout */
     .container { padding:12px; max-width:980px; margin:0 auto; }
     .page { display:none; padding-bottom:24px; }
     .page.active { display:block; }
-
-    /* Cards & Rows */
     .card { background:#fff; border-radius:14px; padding:14px; margin:10px 0; box-shadow:0 2px 0 rgba(0,0,0,.03); }
     .row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; }
     .row + .row { border-top:1px dashed #d7e6e6; }
     .muted { color:#6d8c8c; font-size:12px; }
     hr { border:0; border-top:1px solid #e7efef; margin:10px 0; }
-
-    /* Controls */
     .ctrl-row { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
     .check { display:flex; align-items:center; gap:6px; font-weight:600; color:#155; }
     .check input { width:18px; height:18px; }
     .btn { appearance:none; border:0; border-radius:10px; padding:12px 14px; font-weight:800; background:#1a7b7b; color:#fff; cursor:pointer; }
     .btn.ghost { background:#e9f3f3; color:#166; }
     input, select, textarea { width:100%; padding:10px 12px; border:1px solid #cfe3e3; border-radius:10px; }
-
     .footer { padding:22px 12px; text-align:center; color:#6d8c8c; font-size:13px; }
   </style>
+
+  <!-- Firebase（以 ES Modules 形式載入，並把需要的 API 掛到 window，配合你的 app.js 寫法） -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    // 供 app.js 取得
+    window.firebase        = { initializeApp };
+    window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
+    // 你的雲端設定
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
+      authDomain: "cashflow-71391.firebaseapp.com",
+      databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "cashflow-71391",
+      storageBucket: "cashflow-71391.firebasestorage.app",
+      messagingSenderId: "204834375477",
+      appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
+      measurementId: "G-G2DVG798M8"
+    };
+  </script>
 </head>
 <body>
-  <!-- 頂端列 + 月份切換（app.js 會用 mon-prev / mon-next / currentMonthLabel） -->
   <div class="topbar">
     <div class="brand">極速記帳 v3.3</div>
     <div class="month-nav">
@@ -60,7 +66,6 @@
     </div>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab tab--active" data-tab="rec">記帳</button>
     <button class="tab" data-tab="trf">轉帳</button>
@@ -69,22 +74,62 @@
   </div>
 
   <div class="container">
-    <!-- 記帳頁（提供空白容器，之後可接你原本表單與 CF API） -->
+    <!-- 記帳：表單元件（直接送 CF API） -->
     <section class="page active" id="page-rec">
       <div class="card">
-        <div class="muted">（此區可接你的記帳表單，提交時呼叫 <code>window.CF.addIncome()</code> 或 <code>window.CF.addExpense()</code>）</div>
-      </div>
-      <!-- 快捷範例：可自行把按鈕對應到 window.CF.runQuick('名稱') -->
-      <div class="card">
-        <div class="row"><div>快捷範例</div><div class="muted">可改為你的 UI</div></div>
+        <div class="row"><div style="font-weight:700">新增一筆記錄</div></div>
         <div class="ctrl-row">
-          <button class="btn ghost" onclick="window.CF?.runQuick && window.CF.runQuick('午餐-餐飲')">午餐-餐飲</button>
-          <button class="btn ghost" onclick="window.CF?.runQuick && window.CF.runQuick('食材-肉類')">食材-肉類</button>
+          <div style="flex:1">
+            <label class="muted">Owner</label>
+            <select id="rec-owner">
+              <option value="RESTAURANT" selected>RESTAURANT（餐廳）</option>
+              <option value="JACK">JACK</option>
+              <option value="WAL">WAL</option>
+              <option value="JW">JW（共同）</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label class="muted">Who</label>
+            <select id="rec-who">
+              <option value="JACK" selected>JACK</option>
+              <option value="WAL">WAL</option>
+              <option value="RESTAURANT">RESTAURANT</option>
+            </select>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <div style="flex:1.6">
+            <label class="muted">分類（cat）</label>
+            <input id="rec-cat" placeholder="例如：食材-肉類 / 餐飲 / 個人收入" />
+          </div>
+          <div style="flex:.9">
+            <label class="muted">金額（amt）</label>
+            <input id="rec-amt" type="number" inputmode="decimal" placeholder="0" />
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <div style="flex:1">
+            <label class="muted">備註（note）</label>
+            <input id="rec-note" placeholder="（選填）" />
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <button id="rec-expense" class="btn">記錄支出</button>
+          <button id="rec-income" class="btn ghost">記錄收入</button>
+        </div>
+      </div>
+
+      <!-- 你可保留/調整下面示範快捷 -->
+      <div class="card">
+        <div class="row"><div style="font-weight:700">快捷</div><div class="muted">點擊直接記帳</div></div>
+        <div class="ctrl-row">
+          <button class="btn ghost" onclick="window.CF?.runQuick && CF.runQuick('午餐-餐飲')">午餐-餐飲</button>
+          <button class="btn ghost" onclick="window.CF?.runQuick && CF.runQuick('食材-肉類')">食材-肉類</button>
         </div>
       </div>
     </section>
 
-    <!-- 轉帳頁（app.js 會讀取 #transfer-list，與 xfer-* 表單 ID） -->
+    <!-- 轉帳 -->
     <section class="page" id="page-trf">
       <div class="card">
         <div class="row"><div style="font-weight:700">建立轉帳/還款</div></div>
@@ -131,7 +176,7 @@
       </div>
     </section>
 
-    <!-- 報表頁（app.js 會渲染 #report-box，並監聽 rep-expand / rep-by-kind） -->
+    <!-- 報表 -->
     <section class="page" id="page-rep">
       <div class="card">
         <div class="ctrl-row">
@@ -143,7 +188,7 @@
       <div id="report-box" class="report-box"></div>
     </section>
 
-    <!-- 設定頁（app.js 會讀/寫以下 ID） -->
+    <!-- 設定 -->
     <section class="page" id="page-set">
       <div class="card">
         <div class="row"><div style="font-weight:700">共享空間</div></div>
@@ -151,7 +196,7 @@
           <input id="space-code" placeholder="輸入共享代號（如 my-shop）" style="flex:1" />
           <button id="space-apply" class="btn">套用</button>
         </div>
-        <div class="muted">同一代號的裝置會同步同一份 Firebase Realtime Database 節點。</div>
+        <div class="muted">同一代號的裝置會同步同一個 Realtime Database 節點。</div>
       </div>
 
       <div class="card">
@@ -210,33 +255,13 @@
       </div>
     </section>
 
-    <div class="footer">
-      <span id="footer-version">極速記帳 v3.3</span>
-    </div>
+    <div class="footer"><span id="footer-version">極速記帳 v3.3</span></div>
   </div>
-
-  <!-- （可選）Firebase CDN：若要啟用雲端同步，請在 app.js 前定義 window.firebaseConfig -->
-  <!--
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script>
-    window.firebaseConfig = {
-      apiKey: "…",
-      authDomain: "…",
-      databaseURL: "…",
-      projectId: "…",
-      storageBucket: "…",
-      messagingSenderId: "…",
-      appId: "…"
-    };
-    // 在 app.js 的 initFirebase() 會自動判斷是否啟用
-  </script>
-  -->
 
   <!-- 主程式 -->
   <script src="app.js?v=v17.2-pl"></script>
 
-  <!-- 只負責切換分頁的極簡腳本（不干擾 app.js） -->
+  <!-- Tabs 切換（不干擾 app.js） -->
   <script>
     const tabBtns = Array.from(document.querySelectorAll('.tab'));
     const pages = {
@@ -252,6 +277,29 @@
       if (window.scrollY>0) window.scrollTo({top:0,behavior:'smooth'});
     }
     tabBtns.forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+
+    // 記帳表單事件 → 直接丟 CF API
+    function getRecForm() {
+      return {
+        owner: document.getElementById('rec-owner').value,
+        who:   document.getElementById('rec-who').value,
+        cat:   document.getElementById('rec-cat').value.trim(),
+        amt:   Number(document.getElementById('rec-amt').value||0),
+        note:  document.getElementById('rec-note').value.trim()
+      };
+    }
+    document.getElementById('rec-expense').addEventListener('click', async ()=>{
+      const p = getRecForm(); if(!p.cat || !p.amt) return alert('請填齊「分類 / 金額」');
+      await window.CF?.addExpense?.(p);
+      document.getElementById('rec-amt').value='';
+      document.getElementById('rec-note').value='';
+    });
+    document.getElementById('rec-income').addEventListener('click', async ()=>{
+      const p = getRecForm(); if(!p.cat || !p.amt) return alert('請填齊「分類 / 金額」');
+      await window.CF?.addIncome?.(p);
+      document.getElementById('rec-amt').value='';
+      document.getElementById('rec-note').value='';
+    });
   </script>
 </body>
 </html>
