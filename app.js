@@ -1,6 +1,6 @@
-// ====== 極速記帳 v3.4（fixed build） ======
+// ====== CashFlow v3.5 ======
 
-// --- Firebase 設定（你的專案參數） ---
+// --- Firebase 設定 ---
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
@@ -11,10 +11,9 @@ const firebaseConfig = {
   appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
   measurementId: "G-G2DVG798M8"
 };
-
 firebase.initializeApp(firebaseConfig);
 
-// --- 狀態 ---
+// ---- 狀態 ----
 const state = {
   user: null,
   space: "",
@@ -25,92 +24,133 @@ const state = {
   listeners: []
 };
 
-// UI 狀態
-const uiState = {
-  io: 'expense',           // expense | income
-  scope: 'restaurant',     // restaurant | personal
-  owner: 'JACK',           // RESTAURANT | JACK | WAL
-  who: 'JACK',             // JACK | WAL | JW  -- income 模式下只會有 JACK/WAL
-  group: '',               // 群組選擇（餐廳六群 / 個人收入/支出）
-  catId: ''                // 細項分類
+// UI 狀態（不預設）
+const ui = {
+  io: null,            // 'expense' | 'income'
+  scope: null,         // 'restaurant' | 'personal'
+  owner: 'JACK',       // RESTAURANT | JACK | WAL
+  who: 'JACK',         // JACK | WAL | JW （收入時只有 JACK / WAL）
+  group: '',           // 大項
+  catId: ''            // 細項
 };
 
-// --- DOM Helper ---
-const $ = (q) => document.querySelector(q);
-const $$ = (q) => document.querySelectorAll(q);
+// ---- DOM ----
+const $  = (q)=>document.querySelector(q);
+const $$ = (q)=>document.querySelectorAll(q);
 
-// --- 便利函式 ---
-function uid(){ return Math.random().toString(36).slice(2)+Date.now().toString(36); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function cloudPath(){ const s=(state.space||'default').trim().toLowerCase(); return `rooms/${s}`; }
-function dbRef(p){ return firebase.database().ref(p); }
-function safeKey(s){ return String(s||'').replace(/[.#$[\]/]/g,'_'); }
-function findCat(id){
-  const all = [...(state.catalog?.categories?.restaurant||[]), ...(state.catalog?.categories?.personal||[])];
-  return all.find(c=>c.id===id) || null;
-}
+// ---- Helper ----
+const uid = ()=> Math.random().toString(36).slice(2)+Date.now().toString(36);
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+const cloudPath = ()=> `rooms/${(state.space||'default').trim().toLowerCase()}`;
+const dbRef = (p)=> firebase.database().ref(p);
+const safeKey = (s)=> String(s||'').replace(/[.#$[\]/]/g,'_');
+const toast = (m)=> alert(m);
+
 function catScope(id){
   const r = state.catalog?.categories?.restaurant?.some(c=>c.id===id);
   return r ? 'restaurant' : 'personal';
 }
-function toast(msg){ console.log('[toast]', msg); alert(msg); }
 
-// --- Firebase 登入 & 連線 ---
-async function signIn(){
-  try {
-    const cred = await firebase.auth().signInAnonymously();
-    state.user = cred.user;
-    console.log('Signed in:', cred.user?.uid, 'build=', window.__CF_VERSION__);
-  } catch(e){ console.error('auth error', e); toast('Firebase 連線/登入失敗，請檢查金鑰或網路'); }
+// ---- 連線按鈕狀態 ----
+function setConnected(on){
+  const b = $('#btn-connect');
+  if (!b) return;
+  if (on){
+    b.classList.remove('danger'); b.textContent = '連線中'; b.dataset.state='on';
+  }else{
+    b.classList.add('danger'); b.textContent = '未連線'; b.dataset.state='off';
+  }
 }
 
+// ---- Firebase ----
+async function signIn(){
+  try{
+    const { user } = await firebase.auth().signInAnonymously();
+    state.user = user;
+  }catch(e){
+    console.error(e); toast('Firebase 登入失敗');
+  }
+}
 function clearListeners(){
-  state.listeners.forEach(unsub => { try{ unsub(); }catch{} });
+  state.listeners.forEach(off=>{try{off()}catch{}});
   state.listeners = [];
 }
-
-function onValue(ref, handler){
-  const cb = ref.on('value', snap => handler(snap.val()));
-  state.listeners.push(()=>ref.off('value', cb));
+function onValue(ref, cb){
+  const h = ref.on('value', s => cb(s.val()));
+  state.listeners.push(()=>ref.off('value', h));
 }
 
-// 載入雲端資料
 async function connectSpace(space){
-  state.space = space.trim();
+  state.space = (space||'').trim();
   if(!state.user) await signIn();
   if(!state.space){ toast('請輸入共享代號'); return; }
   clearListeners();
 
-  // 監聽 records/transfers/dues/catalog
-  onValue(dbRef(`${cloudPath()}/records`), (val)=>{
-    const arr = val ? Object.values(val) : [];
-    state.records = arr.sort((a,b)=> (a.ts||0)-(b.ts||0));
+  onValue(dbRef(`${cloudPath()}/records`),(v)=>{
+    state.records = v ? Object.values(v).sort((a,b)=> (a.ts||0)-(b.ts||0)) : [];
     renderRecent(); renderPockets();
   });
-  onValue(dbRef(`${cloudPath()}/transfers`), (val)=>{
-    const arr = val ? Object.values(val) : [];
-    state.transfers = arr.sort((a,b)=> (a.ts||0)-(b.ts||0));
+  onValue(dbRef(`${cloudPath()}/transfers`),(v)=>{
+    state.transfers = v ? Object.values(v) : [];
     renderPockets();
   });
-  onValue(dbRef(`${cloudPath()}/dues`), (val)=>{
-    state.dues = val || { JACK:0, WAL:0 };
+  onValue(dbRef(`${cloudPath()}/dues`),(v)=>{
+    state.dues = v || { JACK:0, WAL:0 };
     renderPockets();
   });
-  onValue(dbRef(`${cloudPath()}/catalog`), (val)=>{
-    state.catalog = val || { categories:{restaurant:[],personal:[]}, items:{} };
-    renderGroupChips();
-    renderManualCatSelect();
+  onValue(dbRef(`${cloudPath()}/catalog`),(v)=>{
+    state.catalog = v || { categories:{restaurant:[],personal:[]}, items:{} };
+    renderGroupChips(); renderManualCatSelect();
   });
+
+  setConnected(true);
 }
 
-// --- 寫入雲端 ---
+// ---- 計算口袋 ----
+function computePocketBalances(){
+  const bal = { RESTAURANT:0, JACK:0, WAL:0 };
+  for(const r of state.records){
+    const v = Number(r.amt)||0;
+    if (r.type==='income'){
+      if (r.owner==='JW'){ bal.JACK += v/2; bal.WAL += v/2; }
+      else bal[r.owner] += v;
+      continue;
+    }
+    const scope = catScope(r.cat);
+    if (scope==='restaurant'){
+      if (r.owner==='JW'){ bal.JACK -= v/2; bal.WAL -= v/2; }
+      else bal[r.owner] -= v;
+    }else{
+      if (r.owner==='RESTAURANT'){
+        bal.RESTAURANT -= v; // 預支：個人口袋不動
+      }else{
+        if (r.owner==='JW'){ bal.JACK -= v/2; bal.WAL -= v/2; }
+        else bal[r.owner] -= v;
+      }
+    }
+  }
+  return bal;
+}
+function renderPockets(){
+  const b = computePocketBalances();
+  const elR=$('#pk-rest'), elJ=$('#pk-jack'), elW=$('#pk-wal');
+  if(!elR) return;
+  elR.textContent = (b.RESTAURANT||0).toLocaleString();
+  elJ.textContent = (b.JACK||0).toLocaleString();
+  elW.textContent = (b.WAL||0).toLocaleString();
+  elR.parentElement.classList.toggle('negative', b.RESTAURANT<0);
+  elJ.parentElement.classList.toggle('negative', b.JACK<0);
+  elW.parentElement.classList.toggle('negative', b.WAL<0);
+}
+
+// ---- 寫入 ----
 async function pushRecord(row){
   const ref = dbRef(`${cloudPath()}/records`).push();
   row.id = row.id || ref.key;
   await ref.set(row);
 }
-async function setDues(dues){
-  await dbRef(`${cloudPath()}/dues`).set(dues);
+async function setDues(d){
+  await dbRef(`${cloudPath()}/dues`).set(d);
 }
 async function addCatalogItem(catId, name){
   if(!name) return;
@@ -120,168 +160,140 @@ async function addCatalogItem(catId, name){
   await dbRef(`${cloudPath()}/catalog/items/${key}`).set(list);
 }
 
-// --- 三口袋計算 ---
-function computePocketBalances(){
-  const bal = { RESTAURANT:0, JACK:0, WAL:0 };
+// ---- 分類渲染（依 io × scope） ----
+function categoriesFor(io, scope){
+  const R = state.catalog?.categories?.restaurant || [];
+  const P = state.catalog?.categories?.personal || [];
+  const map = { restaurant:R, personal:P };
+  const all = map[scope||'restaurant'];
 
-  for(const r of state.records){
-    const v = Number(r.amt)||0;
+  if (!io || !scope) return [];
 
-    if (r.type==='income'){
-      if (r.owner==='JW'){ bal.JACK += v/2; bal.WAL += v/2; }
-      else bal[r.owner] += v;
-      continue;
-    }
-
-    const scope = catScope(r.cat);
-    if (scope==='restaurant'){
-      if (r.owner==='JW'){ bal.JACK -= v/2; bal.WAL -= v/2; }
-      else bal[r.owner] -= v;
-    }else{
-      if (r.owner==='RESTAURANT'){
-        bal.RESTAURANT -= v; // 預支：不動個人口袋，dues 呈現
-      }else{
-        if (r.owner==='JW'){ bal.JACK -= v/2; bal.WAL -= v/2; }
-        else bal[r.owner] -= v;
-      }
-    }
+  // io=income：餐廳只顯示 revenue；個人只顯示 p_income
+  if (io==='income'){
+    const want = scope==='restaurant' ? ['revenue'] : ['p_income'];
+    return all.filter(c=> want.includes(c.kind));
   }
-  return bal;
+  // io=expense：餐廳排除 revenue；個人只顯示 p_expense（九大類）
+  if (io==='expense'){
+    if (scope==='restaurant') return all.filter(c=> c.kind!=='revenue');
+    return all.filter(c=> c.kind==='p_expense');
+  }
+  return [];
 }
 
-function renderPockets(){
-  const b = computePocketBalances();
-  const elR = $('#pk-rest'), elJ=$('#pk-jack'), elW=$('#pk-wal');
-  if (!elR) return;
-  elR.textContent = (b.RESTAURANT||0).toLocaleString();
-  elJ.textContent = (b.JACK||0).toLocaleString();
-  elW.textContent = (b.WAL||0).toLocaleString();
-  elR.parentElement.classList.toggle('negative', b.RESTAURANT<0);
-  elJ.parentElement.classList.toggle('negative', b.JACK<0);
-  elW.parentElement.classList.toggle('negative', b.WAL<0);
-}
-
-// --- Catalog/群組/項目 ---
 function renderManualCatSelect(){
   const sel = $('#rec-manual-cat'); if(!sel) return;
-  const RC = state.catalog?.categories?.restaurant || [];
-  const PC = state.catalog?.categories?.personal || [];
-  const opts = [...RC, ...PC].map(c=>`<option value="${c.id}">${c.id}</option>`).join('');
-  sel.innerHTML = `<option value="">（選擇分類）</option>` + opts;
+  const cats = categoriesFor(ui.io, ui.scope);
+  sel.innerHTML = `<option value="">（選擇大項）</option>` +
+    cats.map(c=> `<option value="${c.id}">${c.label||c.id}</option>`).join('');
 }
 
 function renderGroupChips(){
   const g = $('#group-panel'), i = $('#items-panel');
   g.innerHTML = ''; i.style.display='none'; i.innerHTML = '';
-  uiState.group = ''; uiState.catId = '';
+  ui.group=''; ui.catId='';
 
-  if (uiState.scope==='restaurant'){
-    const groups = [
-      {id:'revenue', name:'營業收入', emoji:'💵'},
-      {id:'cogs', name:'銷貨成本', emoji:'🥬'},
-      {id:'personnel', name:'人事', emoji:'👥'},
-      {id:'utilities', name:'水電租網', emoji:'🏠'},
-      {id:'marketing', name:'行銷', emoji:'📣'},
-      {id:'logistics', name:'物流', emoji:'🚛'},
-      {id:'admin', name:'行政稅務', emoji:'🧾'}
-    ];
-    g.innerHTML = groups.map(x=>`<button class="chip" data-group="${x.id}">${x.emoji}<br>${x.name}</button>`).join('');
-  }else{
-    const groups = [
-      {id:'p_income', name:'個人收入', emoji:'💼'},
-      {id:'p_expense', name:'個人支出', emoji:'🍔'}
-    ];
-    g.innerHTML = groups.map(x=>`<button class="chip" data-group="${x.id}">${x.emoji}<br>${x.name}</button>`).join('');
-  }
+  const cats = categoriesFor(ui.io, ui.scope);
+  g.innerHTML = cats.map(c=>`<button class="chip" data-group="${c.kind}">${c.icon||'🧩'} ${c.label||c.id}</button>`).join('');
 }
 
-// 點群組 → 畫細項分類
+// 點大項 → 顯示項目
 $('#group-panel')?.addEventListener('click', (e)=>{
   const b = e.target.closest('.chip'); if(!b) return;
   $('#group-panel .chip.active')?.classList.remove('active');
   b.classList.add('active');
-  uiState.group = b.dataset.group;
+  ui.group = b.dataset.group;
 
-  const cats = [...state.catalog.categories.restaurant, ...state.catalog.categories.personal]
-    .filter(c => c.kind === uiState.group);
+  const RC = state.catalog?.categories?.restaurant || [];
+  const PC = state.catalog?.categories?.personal || [];
+  const cats = [...RC, ...PC].filter(c=> c.kind===ui.group);
+  const items = cats.map(c=>`<button class="chip" data-cat="${c.id}">${c.icon||'🧩'} ${c.label}</button>`).join('');
 
-  const items = cats.map(c=>`<button class="chip" data-cat="${c.id}">${c.icon||'🧩'}<br>${c.label}</button>`).join('');
-  $('#items-panel').style.display='block';
-  $('#items-panel').innerHTML = items || '<small class="muted">（此群無細項）</small>';
+  const panel = $('#items-panel');
+  panel.style.display = 'grid';
+  panel.innerHTML = items || '<small class="muted">（此群暫無項目）</small>';
 
   renderManualCatSelect();
 });
 
-// 點細項 → 記住 catId
+// 點細項 → 設定 catId
 $('#items-panel')?.addEventListener('click', (e)=>{
   const b = e.target.closest('.chip'); if(!b) return;
   $('#items-panel .chip.active')?.classList.remove('active');
   b.classList.add('active');
-  uiState.catId = b.dataset.cat;
-  $('#rec-manual-cat').value = uiState.catId;
+  ui.catId = b.dataset.cat;
+  $('#rec-manual-cat').value = ui.catId;
+  validateReady();
 });
+
+// ---- 付款人/收款人 ----
 function renderWhoChips(){
-  const box = $('#chip-who');
-  if (!box) return;
-  if (uiState.io === 'income'){
+  const box = $('#chip-who'); if(!box) return;
+  if (ui.io === 'income'){
     $('#lbl-who').textContent = '收款人';
     box.innerHTML = `
       <button class="chip sm active" data-who="JACK">J</button>
       <button class="chip sm" data-who="WAL">W</button>
     `;
-    uiState.who = 'JACK';
-  } else {
+    ui.who = 'JACK';
+  }else{
     $('#lbl-who').textContent = '付款人';
     box.innerHTML = `
       <button class="chip sm active" data-who="JACK">J</button>
       <button class="chip sm" data-who="WAL">W</button>
       <button class="chip sm" data-who="JW">JW</button>
     `;
-    uiState.who = 'JACK';
+    ui.who = 'JACK';
   }
 }
 
-// --- 記帳提交 ---
+// ---- 檢查送出可用 ----
+function validateReady(){
+  const ok = ui.io && ui.scope && (ui.catId || $('#rec-manual-cat').value) && Number($('#rec-amt').value||0) > 0;
+  $('#rec-submit').disabled = !ok;
+}
+
+// ---- 送出 ----
 async function postRecordFromUI(){
   const ds = $('#rec-date')?.value || todayISO();
   const ts = new Date(ds+'T12:00:00').getTime();
   const amt = Number($('#rec-amt')?.value||0);
   if (!amt) return toast('請輸入金額');
 
-  let owner = uiState.owner;
-  let cat = uiState.catId || ($('#rec-manual-cat')?.value||'');
-  if (!cat) return toast('請先選群組與分類，或在下方指定分類');
-  const scope = catScope(cat);
+  const cat = ui.catId || ($('#rec-manual-cat').value||'');
+  if (!ui.io || !ui.scope || !cat) return toast('請先選擇 收支/用途/分類');
+
   const itemName = ($('#rec-item')?.value||'').trim();
   const note = ($('#rec-note')?.value||'').trim();
   if (itemName) await addCatalogItem(cat, itemName);
 
   const row = {
     id: uid(),
-    type: uiState.io,
-    owner,
-    who: uiState.who,
+    type: ui.io,
+    owner: ui.owner,
+    who: ui.who,
     cat, amt, ts,
     note: itemName ? (note? `${itemName}｜${note}`: itemName) : note
   };
   await pushRecord(row);
 
-  // 欠款 dues 處理（不建立 transfers）
+  // 欠款 dues（不建立轉帳）
+  const scope = catScope(cat);
   let dues = {...state.dues};
 
-  if (uiState.io==='expense'){
+  if (ui.io==='expense'){
     if (scope==='restaurant'){
-      // 個人代墊餐廳：owner=J/W/JW
-      if (owner==='JACK' || owner==='WAL' || owner==='JW'){
-        const split = (owner==='JW') ? [['JACK',amt/2], ['WAL',amt/2]] : [[owner, amt]];
+      // 個人代墊餐廳
+      if (ui.owner==='JACK' || ui.owner==='WAL' || ui.owner==='JW'){
+        const split = (ui.owner==='JW') ? [['JACK',amt/2], ['WAL',amt/2]] : [[ui.owner, amt]];
         split.forEach(([who, v]) => dues[who] = Number(dues[who]||0) + v);
         await setDues(dues);
       }
     } else {
-      // 個人分類
-      if (owner==='RESTAURANT'){
-        // 餐廳預支個人：欠餐廳（用負數）
-        const split = (uiState.who==='JW') ? [['JACK',amt/2], ['WAL',amt/2]] : [[uiState.who, amt]];
+      // 個人分類由餐廳支付 → 預支
+      if (ui.owner==='RESTAURANT'){
+        const split = (ui.who==='JW') ? [['JACK',amt/2], ['WAL',amt/2]] : [[ui.who, amt]];
         split.forEach(([who, v]) => dues[who] = Number(dues[who]||0) - v);
         await setDues(dues);
       }
@@ -290,12 +302,12 @@ async function postRecordFromUI(){
 
   // reset
   $('#rec-amt').value=''; $('#rec-item').value=''; $('#rec-note').value='';
-  uiState.catId=''; uiState.group='';
-  renderGroupChips(); renderPockets();
+  ui.catId=''; ui.group='';
+  renderGroupChips(); renderPockets(); validateReady();
   toast('已記帳 ✅');
 }
 
-// --- 最近紀錄（簡版列表） ---
+// ---- 最近紀錄 ----
 function renderRecent(){
   const list = $('#recent-list');
   const arr = [...state.records].slice(-20).reverse();
@@ -303,11 +315,11 @@ function renderRecent(){
   list.innerHTML = arr.map(r=>{
     const d = new Date(r.ts||Date.now()); const ds = `${d.getMonth()+1}/${d.getDate()}`;
     const sign = r.type==='income' ? '+' : '-';
-    return `<li><small class="badge">${ds}</small><b>${r.cat}</b><span class="muted">${r.note||''}</span><span style="margin-left:auto">${sign}${Number(r.amt).toLocaleString()}</span></li>`;
+    return `<li><small>${ds}</small><b style="margin-left:6px">${r.cat}</b><span class="muted" style="margin-left:6px">${r.note||''}</span><span style="margin-left:auto">${sign}${Number(r.amt).toLocaleString()}</span></li>`;
   }).join('');
 }
 
-// --- 事件綁定 ---
+// ---- 綁事件 ----
 function bindEvents(){
   // Tabs
   document.querySelector('.tabs')?.addEventListener('click', (e)=>{
@@ -320,28 +332,42 @@ function bindEvents(){
     });
   });
 
-  // 支出/收入
+  // 連線
+  $('#btn-connect')?.addEventListener('click', ()=>{
+    const sp = $('#space-code').value||'';
+    if(!sp){ toast('請輸入共享代號'); return; }
+    localStorage.setItem('space', sp);
+    connectSpace(sp);
+  });
+
+  // 支出/收入（無預設）
   $('#chip-io')?.addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
     $('#chip-io .chip.active')?.classList.remove('active');
     b.classList.add('active');
-    uiState.io = b.dataset.io;
+    ui.io = b.dataset.io;
     renderWhoChips();
+    renderGroupChips();
+    renderManualCatSelect();
+    validateReady();
   });
 
-  // 用途：餐廳/個人
+  // 用途：餐廳/個人（無預設）
   $('#chip-scope')?.addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
     $('#chip-scope .chip.active')?.classList.remove('active');
     b.classList.add('active');
-    uiState.scope = b.dataset.scope;
+    ui.scope = b.dataset.scope;
     renderGroupChips();
+    renderManualCatSelect();
+    validateReady();
   });
 
-  // 點三口袋 → 設定 owner
+  // 點三口袋 → owner
   document.querySelector('.pockets.inline')?.addEventListener('click', (e)=>{
     const btn = e.target.closest('.pocket'); if(!btn) return;
-    uiState.owner = btn.dataset.pk;
+    ui.owner = btn.dataset.pk;
+    validateReady();
   });
 
   // 付款人/收款人
@@ -349,27 +375,20 @@ function bindEvents(){
     const b = e.target.closest('.chip'); if(!b) return;
     $('#chip-who .chip.active')?.classList.remove('active');
     b.classList.add('active');
-    uiState.who = b.dataset.who;
+    ui.who = b.dataset.who;
   });
 
   // 送出
   $('#rec-submit')?.addEventListener('click', postRecordFromUI);
 
-  // 初始值
-  $('#rec-date')?.setAttribute('value', todayISO());
-  renderWhoChips();
-  renderGroupChips();
+  // 初始化
+  $('#rec-date').setAttribute('value', todayISO());
+  setConnected(false);
+  const last = localStorage.getItem('space')||'';
+  if(last){ $('#space-code').value = last; }
 }
 
-// --- 啟動 ---
 (async function init(){
-  bindEvents();
   await signIn();
-  const last = localStorage.getItem('space') || '';
-  if (last){ $('#space-code').value = last; connectSpace(last); }
-  $('#btn-connect')?.addEventListener('click', ()=> {
-    const sp = $('#space-code').value||'';
-    localStorage.setItem('space', sp);
-    connectSpace(sp);
-  });
+  bindEvents();
 })();
