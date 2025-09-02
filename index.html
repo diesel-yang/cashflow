@@ -1,115 +1,204 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>極速記帳 v3.4</title>
-  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>極速記帳 v3.3</title>
   <link rel="stylesheet" href="style.css" />
-  <meta name="theme-color" content="#0aa7bb"/>
+  <style>
+    /* 小提示浮層（app.js 的 toast 會用到，這裡只保證有過場動畫更順） */
+    #toast { transition: opacity .25s ease; }
+  </style>
+
+  <!-- Firebase（以 ES Modules 形式載入，並把需要的 API 掛到 window，配合 app.js 寫法） -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    // 供 app.js 取得
+    window.firebase        = { initializeApp };
+    window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
+    // 雲端設定（你提供的專案憑證）
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
+      authDomain: "cashflow-71391.firebaseapp.com",
+      databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "cashflow-71391",
+      storageBucket: "cashflow-71391.firebasestorage.app",
+      messagingSenderId: "204834375477",
+      appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
+      measurementId: "G-G2DVG798M8"
+    };
+  </script>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">💨 極速記帳 v3.4</div>
-  <div class="space">
-    <input id="space-code" placeholder="共享代號（例如 jackwal）" />
-    <button id="btn-connect" class="btn sm">連線</button>
+  <div class="topbar">
+    <div class="brand">極速記帳 v3.3</div>
+    <div class="month-nav">
+      <button id="mon-prev" class="icon-btn" aria-label="前一月">‹</button>
+      <div id="currentMonthLabel" class="month-label">—</div>
+      <button id="mon-next" class="icon-btn" aria-label="下一月">›</button>
+    </div>
   </div>
-</header>
 
-<!-- 三口袋淨值 -->
-<section class="pockets">
-  <button class="pocket" data-pk="RESTAURANT">
-    <div class="pocket__icon">🏪</div>
-    <div class="pocket__name">餐廳</div>
-    <div class="pocket__amt" id="pk-rest">—</div>
-  </button>
-  <button class="pocket" data-pk="JACK">
-    <div class="pocket__icon">🧍</div>
-    <div class="pocket__name">Jack</div>
-    <div class="pocket__amt" id="pk-jack">—</div>
-  </button>
-  <button class="pocket" data-pk="WAL">
-    <div class="pocket__icon">🧍</div>
-    <div class="pocket__name">Was</div>
-    <div class="pocket__amt" id="pk-wal">—</div>
-  </button>
-</section>
+  <div class="tabs">
+    <button class="tab tab--active" data-tab="rec">記帳</button>
+    <button class="tab" data-tab="trf">轉帳</button>
+    <button class="tab" data-tab="rep">報表</button>
+    <button class="tab" data-tab="set">設定</button>
+  </div>
 
-<main>
-  <!-- 記帳卡片 -->
-  <section class="card">
-    <div class="row between">
-      <div>
-        <label class="check"><input type="radio" name="io" id="io-exp" checked> 支出</label>
-        <label class="check"><input type="radio" name="io" id="io-inc"> 收入</label>
+  <div class="container">
+    <!-- 記帳 -->
+    <section class="page active" id="page-rec">
+      <div class="card">
+        <div class="row"><b>新增記帳</b></div>
+        <div class="row">
+          <select id="rec-owner">
+            <option value="RESTAURANT" selected>RESTAURANT</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="JW">JW（共同）</option>
+          </select>
+          <select id="rec-who">
+            <option value="JACK" selected>JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="RESTAURANT">RESTAURANT</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="rec-cat" placeholder="分類（例如：食材-肉類 / 飲食）" />
+          <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" />
+        </div>
+        <div class="row">
+          <input id="rec-note" placeholder="備註" />
+        </div>
+        <div class="row" style="gap:10px">
+          <button id="rec-expense" class="btn">支出</button>
+          <button id="rec-income" class="btn btn--ghost">收入</button>
+        </div>
       </div>
-      <div class="row" style="gap:8px">
-        <label>日期</label>
-        <input id="rec-date" type="date">
+    </section>
+
+    <!-- 轉帳 -->
+    <section class="page" id="page-trf">
+      <div class="card">
+        <div class="row"><b>建立轉帳 / 還款</b></div>
+        <div class="row">
+          <label class="w7">From</label>
+          <select id="xfer-from" class="flex1">
+            <option value="餐廳_銀行">餐廳_銀行</option>
+            <option value="餐廳_現金">餐廳_現金</option>
+            <option value="餐廳_基金帳">餐廳_基金帳</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="w7">To</label>
+          <select id="xfer-to" class="flex1">
+            <option value="餐廳_銀行">餐廳_銀行</option>
+            <option value="餐廳_現金">餐廳_現金</option>
+            <option value="餐廳_基金帳">餐廳_基金帳</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="w7">金額</label>
+          <input id="xfer-amt" type="number" class="flex1" placeholder="0" />
+        </div>
+        <div class="row">
+          <label class="w7">備註</label>
+          <input id="xfer-note" type="text" class="flex1" placeholder="可留空" />
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn" id="xfer-submit">建立轉帳</button>
+        </div>
       </div>
-    </div>
+      <div id="transfer-list"></div>
+    </section>
 
-    <div class="row wrap" style="gap:8px">
-      <label id="lbl-owner">付費口袋</label>
-      <select id="rec-owner">
-        <option value="RESTAURANT">餐廳</option>
-        <option value="JACK">Jack</option>
-        <option value="WAL">Was</option>
-      </select>
-
-      <label>付款人</label>
-      <select id="rec-who">
-        <option value="RESTAURANT">RESTAURANT</option>
-        <option value="JACK" selected>JACK</option>
-        <option value="WAL">WAL</option>
-      </select>
-
-      <label>金額</label>
-      <input id="rec-amt" type="number" inputmode="decimal" placeholder="0">
-    </div>
-
-    <!-- 分類區（餐廳 / 個人） -->
-    <div class="row bold">餐廳分類</div>
-    <div id="cats-restaurant" class="chip-grid"></div>
-    <div class="row bold" style="margin-top:6px">個人分類</div>
-    <div id="cats-personal" class="chip-grid"></div>
-
-    <!-- 選了分類後，出現項目 -->
-    <div id="items-panel" class="card soft" style="display:none">
-      <div class="row between">
-        <div><b>選擇項目</b> <span class="muted" id="items-subtitle"></span></div>
-        <small class="muted">找不到？用下方手動新增</small>
+    <!-- 報表 -->
+    <section class="page" id="page-rep">
+      <div class="card">
+        <div class="ctrl-row">
+          <label class="check"><input type="checkbox" id="rep-expand" /> 明細展開</label>
+          <label class="check"><input type="checkbox" id="rep-by-kind" /> 按類型小計</label>
+          <button class="btn btn--ghost" onclick="CF.refresh()">重新整理</button>
+        </div>
       </div>
-      <div id="items-grid" class="chip-grid"></div>
-      <div class="row wrap" style="gap:8px;margin-top:8px">
-        <input id="rec-item" placeholder="手動新增項目名…" />
-        <select id="rec-manual-cat"></select>
-        <input id="rec-note" placeholder="備註（可省略）" />
-        <button id="rec-submit" class="btn">送出</button>
+      <div id="report-box" class="report-box"></div>
+    </section>
+
+    <!-- 設定 -->
+    <section class="page" id="page-set">
+      <div class="card">
+        <div class="row"><b>共享空間</b></div>
+        <div class="row">
+          <input id="space-code" placeholder="輸入共享代號（如 my-shop）" />
+          <button id="space-apply" class="btn">套用</button>
+        </div>
+        <div class="muted">同一代號的裝置會同步同一個 Realtime Database 節點。</div>
       </div>
-    </div>
-  </section>
+      <div class="card">
+        <div class="row"><b>分類管理</b></div>
+        <div class="row">
+          <input id="cat-new" placeholder="分類名稱（例如：飲食 / 食材-肉類）" />
+          <select id="cat-kind">
+            <option value="revenue">revenue</option>
+            <option value="cogs">cogs</option>
+            <option value="personnel">personnel</option>
+            <option value="utilities">utilities</option>
+            <option value="marketing">marketing</option>
+            <option value="logistics">logistics</option>
+            <option value="admin">admin</option>
+            <option value="p_income">p_income</option>
+            <option value="p_expense">p_expense</option>
+          </select>
+          <button id="cat-add" class="btn">新增</button>
+        </div>
+        <div id="cat-list"></div>
+      </div>
 
-  <!-- 最近紀錄（簡版） -->
-  <section class="card">
-    <div class="row between"><b>最近 20 筆</b><small class="muted" id="rec-count">0</small></div>
-    <ul id="recent-list" class="list"></ul>
-  </section>
-</main>
+      <div class="card" id="quick-form">
+        <div class="row"><b>快捷管理</b></div>
+        <div class="row"><input id="q-label" placeholder="名稱（如：午餐-餐飲）" /></div>
+        <div class="row"><input id="q-cat" placeholder="分類（如：飲食 / 食材-肉類）" /></div>
+        <div class="row"><input id="q-amt" type="number" placeholder="金額" /></div>
+        <div class="row"><select id="q-type"><option value="expense">expense</option><option value="income">income</option></select></div>
+        <div class="row"><select id="q-owner"><option>RESTAURANT</option><option>JACK</option><option>WAL</option><option>JW</option></select></div>
+        <div class="row"><select id="q-who"><option>JACK</option><option>WAL</option><option>RESTAURANT</option></select></div>
+        <div class="row"><button id="quick-save" class="btn">儲存/覆寫</button></div>
+        <div id="quick-list"></div>
+      </div>
 
-<footer class="ft">Made for Jack & Was · Firebase Realtime DB + 本機快取</footer>
+      <div class="card">
+        <div class="row"><b>本機快取</b></div>
+        <button id="reset-local" class="btn btn--ghost">清除本機快取（不影響雲端）</button>
+      </div>
+    </section>
 
-<!-- Firebase SDK (compat 9.x) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <div class="footer"><span id="footer-version">極速記帳 v3.3</span></div>
+  </div>
 
-<script src="app.js"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+  <script src="app.js?v=v17.4"></script>
+
+  <!-- Tabs 切換（不干擾 app.js） -->
+  <script>
+    const tabBtns = Array.from(document.querySelectorAll('.tab'));
+    const pages = {
+      rec: document.getElementById('page-rec'),
+      trf: document.getElementById('page-trf'),
+      rep: document.getElementById('page-rep'),
+      set: document.getElementById('page-set'),
+    };
+    function switchTab(key){
+      for (const k in pages) pages[k].classList.toggle('active', k===key);
+      tabBtns.forEach(b=>b.classList.toggle('tab--active', b.dataset.tab===key));
+      if (key==='rep' && window.renderReport) window.renderReport();
+      if (window.scrollY>0) window.scrollTo({top:0,behavior:'smooth'});
+    }
+    tabBtns.forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+  </script>
 </body>
 </html>
