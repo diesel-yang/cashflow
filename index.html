@@ -4,142 +4,254 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
+
+  <!-- 單一版型樣式：合併且精簡，避免與其他 CSS 衝突 -->
   <style>
-    :root { --teal:#1f8a84; --ink:#233; --muted:#6b7; --bg:#f5f7f8; }
-    html,body{margin:0;padding:0;background:#ecf2f3;color:#223;font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", Arial, sans-serif;}
-    .appbar{background:var(--teal); color:#fff; padding:12px 16px; position:sticky; top:0; z-index:10;}
-    .appbar .title{font-weight:800; font-size:20px;}
-    .monthbar{display:flex; gap:8px; align-items:center; margin-top:8px;}
-    .chip{border:none; border-radius:12px; padding:8px 12px; background:#167a74; color:#fff; font-weight:700;}
-    .chip.ghost{background:#0f6b66;}
-    .chip:active{transform:scale(.98)}
-    .container{padding:14px;}
-    .tabs{display:flex; gap:8px; margin:8px 0 4px;}
-    .tab{flex:1; background:#fff; border-radius:12px; padding:12px; text-align:center; font-weight:800; color:#3b6;}
-    .tab.active{background:#1f8a84; color:#fff;}
-    .view{display:none;}
-    .view.active{display:block;}
-    .card{background:#fff; border-radius:14px; padding:12px; margin:10px 0; box-shadow: 0 1px 0 rgba(0,0,0,.04);}
-    .card.soft{background:#f9fbfb;}
-    .card.tint{background:#eef6f6;}
-    .row{display:flex; align-items:center; gap:8px; padding:6px 0;}
-    .row.sm{padding:4px 0;}
-    .row.head{font-weight:700}
-    .w7{flex:0 0 7em}
-    .w9{flex:0 0 9em}
-    .flex1{flex:1}
-    .ta-r{text-align:right}
-    .mt6{margin-top:6px}
-    .muted{color:#6c7a7a; font-size:12px}
-    .toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
-    .switch{display:flex; align-items:center; gap:6px}
-    footer{color:#7c8; text-align:center; padding:16px 6px; font-size:12px}
-    button.btn{background:#1f8a84; color:#fff; border:none; border-radius:12px; padding:10px 14px; font-weight:700}
-    button.btn.ghost{background:#e7eeee; color:#1f8a84}
-    input[type="checkbox"]{transform:scale(1.1)}
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; background:#f3f7f7; color:#173131;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial,sans-serif; }
+
+    /* Top bar + Month nav */
+    .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px; background:#1a7b7b; color:#fff; }
+    .brand { font-weight:800; letter-spacing:.5px; }
+    .month-nav { display:flex; align-items:center; gap:8px; }
+    .icon-btn { border:0; border-radius:10px; background:#147171; color:#fff; width:34px; height:34px; font-size:18px; line-height:34px; cursor:pointer; }
+    .icon-btn:active { transform:translateY(1px); }
+    .month-label { background:#198f8f; padding:6px 10px; border-radius:10px; font-weight:700; }
+
+    /* Tabs */
+    .tabs { display:flex; gap:10px; padding:10px; background:#e8f2f2; justify-content:space-around; position:sticky; top:54px; z-index:9; }
+    .tab { flex:1; border:0; border-radius:10px; padding:12px 10px; cursor:pointer; background:#fff; font-weight:700; color:#166; letter-spacing:.5px;
+      box-shadow:0 1px 0 rgba(0,0,0,.03); text-align:center; }
+    .tab--active { background:#1a7b7b; color:#fff; }
+
+    /* Layout */
+    .container { padding:12px; max-width:980px; margin:0 auto; }
+    .page { display:none; padding-bottom:24px; }
+    .page.active { display:block; }
+
+    /* Cards & Rows */
+    .card { background:#fff; border-radius:14px; padding:14px; margin:10px 0; box-shadow:0 2px 0 rgba(0,0,0,.03); }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; }
+    .row + .row { border-top:1px dashed #d7e6e6; }
+    .muted { color:#6d8c8c; font-size:12px; }
+    hr { border:0; border-top:1px solid #e7efef; margin:10px 0; }
+
+    /* Controls */
+    .ctrl-row { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+    .check { display:flex; align-items:center; gap:6px; font-weight:600; color:#155; }
+    .check input { width:18px; height:18px; }
+    .btn { appearance:none; border:0; border-radius:10px; padding:12px 14px; font-weight:800; background:#1a7b7b; color:#fff; cursor:pointer; }
+    .btn.ghost { background:#e9f3f3; color:#166; }
+    input, select, textarea { width:100%; padding:10px 12px; border:1px solid #cfe3e3; border-radius:10px; }
+
+    .footer { padding:22px 12px; text-align:center; color:#6d8c8c; font-size:13px; }
   </style>
 </head>
 <body>
-  <div class="appbar">
-    <div class="title">極速記帳 v3.3</div>
-    <div class="monthbar">
-      <button class="chip ghost" id="reportMonthPrev">‹</button>
-      <span class="chip" id="reportMonthLabel">—</span>
-      <button class="chip ghost" id="reportMonthNext">›</button>
+  <!-- 頂端列 + 月份切換（app.js 會用 mon-prev / mon-next / currentMonthLabel） -->
+  <div class="topbar">
+    <div class="brand">極速記帳 v3.3</div>
+    <div class="month-nav">
+      <button id="mon-prev" class="icon-btn" aria-label="前一月">‹</button>
+      <div id="currentMonthLabel" class="month-label">—</div>
+      <button id="mon-next" class="icon-btn" aria-label="下一月">›</button>
     </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab tab--active" data-tab="rec">記帳</button>
+    <button class="tab" data-tab="trf">轉帳</button>
+    <button class="tab" data-tab="rep">報表</button>
+    <button class="tab" data-tab="set">設定</button>
   </div>
 
   <div class="container">
-    <!-- Tabs -->
-    <div class="tabs">
-      <div class="tab" id="tab-rec">記帳</div>
-      <div class="tab" id="tab-trf">轉帳</div>
-      <div class="tab active" id="tab-rep">報表</div>
-      <div class="tab" id="tab-set">設定</div>
-    </div>
-
-    <!-- 記帳 -->
-    <section class="view" id="view-rec">
+    <!-- 記帳頁（提供空白容器，之後可接你原本表單與 CF API） -->
+    <section class="page active" id="page-rec">
       <div class="card">
-        <div class="muted">（此處放你的記帳表單；保留原本欄位即可）</div>
+        <div class="muted">（此區可接你的記帳表單，提交時呼叫 <code>window.CF.addIncome()</code> 或 <code>window.CF.addExpense()</code>）</div>
       </div>
-    </section>
-
-    <!-- 轉帳 -->
-    <section class="view" id="view-trf">
+      <!-- 快捷範例：可自行把按鈕對應到 window.CF.runQuick('名稱') -->
       <div class="card">
-        <div class="muted">（此處放你的轉帳/還款表單；保留原本欄位與邏輯即可）</div>
-      </div>
-    </section>
-
-    <!-- 報表 -->
-    <section class="view active" id="view-rep">
-      <div class="card">
-        <div class="toolbar">
-          <label class="switch">
-            <input type="checkbox" id="rep-expand" />
-            <span>明細展開</span>
-          </label>
-          <label class="switch">
-            <input type="checkbox" id="rep-by-kind" />
-            <span>按類型小計</span>
-          </label>
-          <button class="btn ghost" id="rep-refresh">重新整理</button>
+        <div class="row"><div>快捷範例</div><div class="muted">可改為你的 UI</div></div>
+        <div class="ctrl-row">
+          <button class="btn ghost" onclick="window.CF?.runQuick && window.CF.runQuick('午餐-餐飲')">午餐-餐飲</button>
+          <button class="btn ghost" onclick="window.CF?.runQuick && window.CF.runQuick('食材-肉類')">食材-肉類</button>
         </div>
       </div>
-      <div id="report-box"></div>
     </section>
 
-    <!-- 設定 -->
-    <section class="view" id="view-set">
+    <!-- 轉帳頁（app.js 會讀取 #transfer-list，與 xfer-* 表單 ID） -->
+    <section class="page" id="page-trf">
       <div class="card">
-        <div class="muted">（此處放共享代號 / 類別管理 / 預算 / 雲端同步設定等 UI）</div>
+        <div class="row"><div style="font-weight:700">建立轉帳/還款</div></div>
+        <div class="ctrl-row">
+          <div style="flex:1">
+            <label class="muted">From</label>
+            <select id="xfer-from">
+              <option value="">請選擇</option>
+              <option>餐廳_銀行</option>
+              <option>餐廳_現金</option>
+              <option>JACK</option>
+              <option>WAL</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label class="muted">To</label>
+            <select id="xfer-to">
+              <option value="">請選擇</option>
+              <option>餐廳_銀行</option>
+              <option>餐廳_現金</option>
+              <option>JACK</option>
+              <option>WAL</option>
+            </select>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <div style="flex:1">
+            <label class="muted">金額</label>
+            <input id="xfer-amt" type="number" inputmode="decimal" placeholder="0" />
+          </div>
+          <div style="flex:1">
+            <label class="muted">備註</label>
+            <input id="xfer-note" placeholder="（選填）" />
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <button id="xfer-submit" class="btn">建立轉帳</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row"><div style="font-weight:700">本月轉帳紀錄</div></div>
+        <div id="transfer-list" class="report-box"></div>
       </div>
     </section>
 
-    <footer>極速記帳 v3.3 – build v17.x（P&L 版）</footer>
+    <!-- 報表頁（app.js 會渲染 #report-box，並監聽 rep-expand / rep-by-kind） -->
+    <section class="page" id="page-rep">
+      <div class="card">
+        <div class="ctrl-row">
+          <label class="check"><input type="checkbox" id="rep-expand" /> 明細展開</label>
+          <label class="check"><input type="checkbox" id="rep-by-kind" /> 按類型小計</label>
+          <button class="btn ghost" onclick="window.CF?.refresh && CF.refresh()">重新整理</button>
+        </div>
+      </div>
+      <div id="report-box" class="report-box"></div>
+    </section>
+
+    <!-- 設定頁（app.js 會讀/寫以下 ID） -->
+    <section class="page" id="page-set">
+      <div class="card">
+        <div class="row"><div style="font-weight:700">共享空間</div></div>
+        <div class="ctrl-row">
+          <input id="space-code" placeholder="輸入共享代號（如 my-shop）" style="flex:1" />
+          <button id="space-apply" class="btn">套用</button>
+        </div>
+        <div class="muted">同一代號的裝置會同步同一份 Firebase Realtime Database 節點。</div>
+      </div>
+
+      <div class="card">
+        <div class="row"><div style="font-weight:700">分類管理</div></div>
+        <div class="ctrl-row">
+          <input id="cat-new" placeholder="分類名稱（例如：食材-肉類）" style="flex:2" />
+          <select id="cat-kind" style="flex:1">
+            <option value="revenue">revenue</option>
+            <option value="cogs">cogs</option>
+            <option value="personnel">personnel</option>
+            <option value="utilities">utilities</option>
+            <option value="marketing">marketing</option>
+            <option value="logistics">logistics</option>
+            <option value="admin" selected>admin</option>
+            <option value="p_income">p_income</option>
+            <option value="p_expense">p_expense</option>
+          </select>
+          <button id="cat-add" class="btn">新增</button>
+        </div>
+        <div id="cat-list"></div>
+      </div>
+
+      <div class="card" id="quick-form">
+        <div class="row"><div style="font-weight:700">快捷管理</div></div>
+        <div class="ctrl-row">
+          <input id="q-label" placeholder="快捷名稱（如：午餐-餐飲）" style="flex:2" />
+          <select id="q-type" style="flex:1">
+            <option value="expense" selected>expense</option>
+            <option value="income">income</option>
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <input id="q-cat" placeholder="分類（如：餐飲 / 食材-肉類）" style="flex:2" />
+          <input id="q-amt" type="number" inputmode="decimal" placeholder="金額" style="flex:1" />
+        </div>
+        <div class="ctrl-row">
+          <select id="q-owner" style="flex:1">
+            <option value="RESTAURANT" selected>RESTAURANT</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="JW">JW（共同）</option>
+          </select>
+          <select id="q-who" style="flex:1">
+            <option value="JACK" selected>JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="RESTAURANT">RESTAURANT</option>
+          </select>
+          <button id="quick-save" class="btn" style="flex:1">儲存/覆寫</button>
+        </div>
+        <div id="quick-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><div style="font-weight:700">本機快取</div></div>
+        <button id="reset-local" class="btn ghost">清除本機快取（不影響雲端）</button>
+      </div>
+    </section>
+
+    <div class="footer">
+      <span id="footer-version">極速記帳 v3.3</span>
+    </div>
   </div>
 
-  <!-- 你的主程式 -->
-  <script src="app.js?v=pl-final"></script>
+  <!-- （可選）Firebase CDN：若要啟用雲端同步，請在 app.js 前定義 window.firebaseConfig -->
+  <!--
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script>
-    // 簡易頁籤切換（維持你原本也可）
-    const views = {
-      rec: document.getElementById('view-rec'),
-      trf: document.getElementById('view-trf'),
-      rep: document.getElementById('view-rep'),
-      set: document.getElementById('view-set'),
+    window.firebaseConfig = {
+      apiKey: "…",
+      authDomain: "…",
+      databaseURL: "…",
+      projectId: "…",
+      storageBucket: "…",
+      messagingSenderId: "…",
+      appId: "…"
     };
-    const tabs = {
-      rec: document.getElementById('tab-rec'),
-      trf: document.getElementById('tab-trf'),
-      rep: document.getElementById('tab-rep'),
-      set: document.getElementById('tab-set'),
+    // 在 app.js 的 initFirebase() 會自動判斷是否啟用
+  </script>
+  -->
+
+  <!-- 主程式 -->
+  <script src="app.js?v=v17.2-pl"></script>
+
+  <!-- 只負責切換分頁的極簡腳本（不干擾 app.js） -->
+  <script>
+    const tabBtns = Array.from(document.querySelectorAll('.tab'));
+    const pages = {
+      rec: document.getElementById('page-rec'),
+      trf: document.getElementById('page-trf'),
+      rep: document.getElementById('page-rep'),
+      set: document.getElementById('page-set'),
     };
-    function activate(key){
-      for (const k in views){ views[k].classList.toggle('active', k===key); }
-      for (const k in tabs){ tabs[k].classList.toggle('active', k===key); }
-      if (key==='rep' && typeof renderReport==='function'){ renderReport(); }
+    function switchTab(key){
+      for (const k in pages) pages[k].classList.toggle('active', k===key);
+      tabBtns.forEach(b=>b.classList.toggle('tab--active', b.dataset.tab===key));
+      if (key==='rep' && window.renderReport) window.renderReport();
+      if (window.scrollY>0) window.scrollTo({top:0,behavior:'smooth'});
     }
-    tabs.rec.onclick=()=>activate('rec');
-    tabs.trf.onclick=()=>activate('trf');
-    tabs.rep.onclick=()=>activate('rep');
-    tabs.set.onclick=()=>activate('set');
-
-    // 月份切換
-    document.getElementById('reportMonthPrev').onclick = ()=> window.setReportMonthOffset && setReportMonthOffset(-1);
-    document.getElementById('reportMonthNext').onclick = ()=> window.setReportMonthOffset && setReportMonthOffset(+1);
-
-    // 報表控制
-    document.getElementById('rep-expand').onchange = ()=> window.renderReport && renderReport();
-    document.getElementById('rep-by-kind').onchange = ()=> window.renderReport && renderReport();
-    document.getElementById('rep-refresh').onclick = ()=> window.renderReport && renderReport();
-
-    // 首頁直接顯示報表
-    document.addEventListener('DOMContentLoaded', ()=>{
-      if (window.updateReportMonthLabel) updateReportMonthLabel();
-      if (window.renderReport) renderReport();
-    });
+    tabBtns.forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
   </script>
 </body>
 </html>
