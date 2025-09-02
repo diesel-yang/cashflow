@@ -207,6 +207,7 @@ async function pullCloud(){
   }
   state.isLoading = false;
   render();
+     renderCatDatalist(); // ← 確保首次載入也有
 }
 async function pushCloud(){
   if(!state.useCloud || !fb.rtdb) return;
@@ -646,9 +647,17 @@ function render(){
   renderReport();
   renderTransfer();
   renderSettings();
+  renderCatDatalist();
+
   const dueJ = $('#due-jack'); if(dueJ) dueJ.textContent = fmt(state.dues.jack||0);
   const dueW = $('#due-wal');  if(dueW) dueW.textContent = fmt(state.dues.wal||0);
   const f = $('#footer-version'); if(f) f.textContent = `極速記帳 v3.3 build ${VERSION}`;
+}
+function renderCatDatalist(){
+  const dl = document.getElementById('cat-list');
+  if (!dl) return;
+  const uniq = new Set((state.categories||[]).map(c=>c.label).filter(Boolean));
+  dl.innerHTML = Array.from(uniq).sort().map(lbl=>`<option value="${lbl}"></option>`).join('');
 }
 
 /* =========================
