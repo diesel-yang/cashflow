@@ -5,14 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
   <link rel="stylesheet" href="stgyle.css" />
+  <style>
+    /* 小提示浮層（app.js 的 toast 會用到，這裡只保證有過場動畫更順） */
+    #toast { transition: opacity .25s ease; }
+  </style>
+
+  <!-- Firebase（以 ES Modules 形式載入，並把需要的 API 掛到 window，配合 app.js 寫法） -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    // 供 app.js 取得
+    window.firebase        = { initializeApp };
+    window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
+    // 雲端設定（你提供的專案憑證）
+    window.firebaseConfig = {
+      apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
+      authDomain: "cashflow-71391.firebaseapp.com",
+      databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "cashflow-71391",
+      storageBucket: "cashflow-71391.firebasestorage.app",
+      messagingSenderId: "204834375477",
+      appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
+      measurementId: "G-G2DVG798M8"
+    };
+  </script>
 </head>
 <body>
   <div class="topbar">
     <div class="brand">極速記帳 v3.3</div>
     <div class="month-nav">
-      <button id="mon-prev" class="icon-btn">‹</button>
+      <button id="mon-prev" class="icon-btn" aria-label="前一月">‹</button>
       <div id="currentMonthLabel" class="month-label">—</div>
-      <button id="mon-next" class="icon-btn">›</button>
+      <button id="mon-next" class="icon-btn" aria-label="下一月">›</button>
     </div>
   </div>
 
@@ -30,13 +54,13 @@
         <div class="row"><b>新增記帳</b></div>
         <div class="row">
           <select id="rec-owner">
-            <option value="RESTAURANT">RESTAURANT</option>
+            <option value="RESTAURANT" selected>RESTAURANT</option>
             <option value="JACK">JACK</option>
             <option value="WAL">WAL</option>
             <option value="JW">JW（共同）</option>
           </select>
           <select id="rec-who">
-            <option value="JACK">JACK</option>
+            <option value="JACK" selected>JACK</option>
             <option value="WAL">WAL</option>
             <option value="RESTAURANT">RESTAURANT</option>
           </select>
@@ -60,8 +84,8 @@
       <div class="card">
         <div class="row"><b>建立轉帳 / 還款</b></div>
         <div class="row">
-          <label>From</label>
-          <select id="xfer-from">
+          <label class="w7">From</label>
+          <select id="xfer-from" class="flex1">
             <option value="餐廳_銀行">餐廳_銀行</option>
             <option value="餐廳_現金">餐廳_現金</option>
             <option value="餐廳_基金帳">餐廳_基金帳</option>
@@ -70,8 +94,8 @@
           </select>
         </div>
         <div class="row">
-          <label>To</label>
-          <select id="xfer-to">
+          <label class="w7">To</label>
+          <select id="xfer-to" class="flex1">
             <option value="餐廳_銀行">餐廳_銀行</option>
             <option value="餐廳_現金">餐廳_現金</option>
             <option value="餐廳_基金帳">餐廳_基金帳</option>
@@ -79,10 +103,16 @@
             <option value="WAL">WAL</option>
           </select>
         </div>
-        <div class="row"><input id="xfer-amt" type="number" placeholder="金額" /></div>
-        <div class="row"><input id="xfer-note" placeholder="備註" /></div>
+        <div class="row">
+          <label class="w7">金額</label>
+          <input id="xfer-amt" type="number" class="flex1" placeholder="0" />
+        </div>
+        <div class="row">
+          <label class="w7">備註</label>
+          <input id="xfer-note" type="text" class="flex1" placeholder="可留空" />
+        </div>
         <div class="row" style="justify-content:flex-end">
-          <button id="xfer-submit" class="btn">建立轉帳</button>
+          <button class="btn" id="xfer-submit">建立轉帳</button>
         </div>
       </div>
       <div id="transfer-list"></div>
@@ -105,14 +135,15 @@
       <div class="card">
         <div class="row"><b>共享空間</b></div>
         <div class="row">
-          <input id="space-code" placeholder="輸入共享代號" />
+          <input id="space-code" placeholder="輸入共享代號（如 my-shop）" />
           <button id="space-apply" class="btn">套用</button>
         </div>
+        <div class="muted">同一代號的裝置會同步同一個 Realtime Database 節點。</div>
       </div>
       <div class="card">
         <div class="row"><b>分類管理</b></div>
         <div class="row">
-          <input id="cat-new" placeholder="分類名稱" />
+          <input id="cat-new" placeholder="分類名稱（例如：飲食 / 食材-肉類）" />
           <select id="cat-kind">
             <option value="revenue">revenue</option>
             <option value="cogs">cogs</option>
@@ -128,10 +159,11 @@
         </div>
         <div id="cat-list"></div>
       </div>
+
       <div class="card" id="quick-form">
         <div class="row"><b>快捷管理</b></div>
-        <div class="row"><input id="q-label" placeholder="名稱" /></div>
-        <div class="row"><input id="q-cat" placeholder="分類" /></div>
+        <div class="row"><input id="q-label" placeholder="名稱（如：午餐-餐飲）" /></div>
+        <div class="row"><input id="q-cat" placeholder="分類（如：飲食 / 食材-肉類）" /></div>
         <div class="row"><input id="q-amt" type="number" placeholder="金額" /></div>
         <div class="row"><select id="q-type"><option value="expense">expense</option><option value="income">income</option></select></div>
         <div class="row"><select id="q-owner"><option>RESTAURANT</option><option>JACK</option><option>WAL</option><option>JW</option></select></div>
@@ -139,27 +171,34 @@
         <div class="row"><button id="quick-save" class="btn">儲存/覆寫</button></div>
         <div id="quick-list"></div>
       </div>
-      <div class="card"><button id="reset-local" class="btn btn--ghost">清除本機快取</button></div>
+
+      <div class="card">
+        <div class="row"><b>本機快取</b></div>
+        <button id="reset-local" class="btn btn--ghost">清除本機快取（不影響雲端）</button>
+      </div>
     </section>
 
-    <div class="footer"><span id="footer-version"></span></div>
+    <div class="footer"><span id="footer-version">極速記帳 v3.3</span></div>
   </div>
 
   <script src="app.js?v=v17.4"></script>
+
+  <!-- Tabs 切換（不干擾 app.js） -->
   <script>
-    const tabBtns = document.querySelectorAll('.tab');
+    const tabBtns = Array.from(document.querySelectorAll('.tab'));
     const pages = {
       rec: document.getElementById('page-rec'),
       trf: document.getElementById('page-trf'),
       rep: document.getElementById('page-rep'),
       set: document.getElementById('page-set'),
     };
-    tabBtns.forEach(b=> b.addEventListener('click', ()=>{
-      const key=b.dataset.tab;
-      for(const k in pages){ pages[k].classList.toggle('active',k===key); }
-      tabBtns.forEach(x=>x.classList.toggle('tab--active',x.dataset.tab===key));
-      if(key==='rep' && window.renderReport) renderReport();
-    }));
+    function switchTab(key){
+      for (const k in pages) pages[k].classList.toggle('active', k===key);
+      tabBtns.forEach(b=>b.classList.toggle('tab--active', b.dataset.tab===key));
+      if (key==='rep' && window.renderReport) window.renderReport();
+      if (window.scrollY>0) window.scrollTo({top:0,behavior:'smooth'});
+    }
+    tabBtns.forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
   </script>
 </body>
 </html>
