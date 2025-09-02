@@ -1,9 +1,9 @@
 {
   "name": "極速記帳",
   "short_name": "記帳",
-  "start_url": "./index.html",
+  "start_url": ".",
   "display": "standalone",
-  "theme_color": "#208b8c",
-  "background_color": "#ffffff",
+  "background_color": "#f6fbfc",
+  "theme_color": "#0aa7bb",
   "icons": []
 }

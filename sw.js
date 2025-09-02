@@ -1,2 +1,9 @@
-// 極簡 SW：直接走網路（保留擴充空間）
-self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+// very small service worker for offline shell
+self.addEventListener('install', (e)=>{
+  e.waitUntil(caches.open('cf-v1').then(c=> c.addAll([
+    './','./index.html','./style.css','./app.js'
+  ])));
+});
+self.addEventListener('fetch', (e)=>{
+  e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request)));
+});
