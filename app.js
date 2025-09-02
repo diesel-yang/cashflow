@@ -284,7 +284,7 @@ function removeQuick(id){
 }
 
 /* =========================
-   報表：P&L（餐廳）
+   報表：P&L損益表（餐廳）
    ========================= */
 function getRestaurantMonthRows(date=new Date()){
   const y = date.getFullYear(), m = date.getMonth();
@@ -396,7 +396,7 @@ function renderReport(){
   const settlement = computeMonthlySettlement(state.month);
   const settleHTML = `
     <div class="card" style="background:#fff7ea">
-      <div style="font-weight:700;margin-bottom:6px">月結結算（${ym}）</div>
+      <div style="font-weight:700;margin-bottom:6px">月結算（${ym}）</div>
       <div class="row"><div>本月淨利</div><div><b>${fmt(settlement.net)}</b></div></div>
       <hr/>
       <div class="row"><div>營運基金（1/3）</div><div>${fmt(settlement.opFund)}</div></div>
@@ -435,7 +435,7 @@ function renderReport(){
     </div>
 
     <div class="card" style="background:#eef6f6">
-      <div style="font-weight:700;margin-bottom:6px">餐廳 P&L（本月）</div>
+      <div style="font-weight:700;margin-bottom:6px">本月餐廳損益表（P&L）</div>
       ${kindHTML}
     </div>
 
@@ -446,7 +446,7 @@ function renderReport(){
 }
 
 /* =========================
-   月結結算（三等份 + 預支扣回）
+   月結算（三等份 + 預支扣回）
    ========================= */
 function sumPersonalAdvance(rows, who){
   // 個人預支：owner=RESTAURANT、type=expense、who=JACK/WAL、kind=p_expense
@@ -738,6 +738,31 @@ async function init(){
     saveLocal(); await pushCloud(); renderTransfer();
     $('#xfer-amt').value=''; $('#xfer-note').value='';
     toast('已建立轉帳（若為還款已自動沖銷）');
+  });
+
+     // === 記帳頁：支出 / 收入 ===
+  $('#rec-expense')?.addEventListener('click', async ()=>{
+    const owner = $('#rec-owner')?.value || 'RESTAURANT';
+    const who   = $('#rec-who')?.value   || 'JACK';
+    const cat   = ($('#rec-cat')?.value || '').trim();
+    const amt   = Number($('#rec-amt')?.value || 0);
+    const note  = ($('#rec-note')?.value || '').trim();
+    if (!cat || !amt){ toast('請填「分類」與「金額」'); return; }
+    await window.CF.addExpense({ owner, who, cat, amt, note });
+    $('#rec-amt').value=''; $('#rec-note').value='';
+    toast('已記錄支出');
+  });
+
+  $('#rec-income')?.addEventListener('click', async ()=>{
+    const owner = $('#rec-owner')?.value || 'RESTAURANT';
+    const who   = $('#rec-who')?.value   || 'JACK';
+    const cat   = ($('#rec-cat')?.value || '').trim();
+    const amt   = Number($('#rec-amt')?.value || 0);
+    const note  = ($('#rec-note')?.value || '').trim();
+    if (!cat || !amt){ toast('請填「分類」與「金額」'); return; }
+    await window.CF.addIncome({ owner, who, cat, amt, note });
+    $('#rec-amt').value=''; $('#rec-note').value='';
+    toast('已記錄收入');
   });
 
   // 報表切換
