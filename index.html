@@ -3,51 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>極速記帳 v3.4</title>
+  <title>CashFlow v3.5</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css" />
   <meta name="theme-color" content="#0aa7bb"/>
 </head>
 <body>
+
 <header class="topbar">
-  <div class="brand">💨 極速記帳 v3.4</div>
+  <div class="tabs">
+    <button class="tab active" data-view="book">記帳</button>
+    <button class="tab" data-view="transfer">轉帳</button>
+    <button class="tab" data-view="report">報表</button>
+    <button class="tab" data-view="settings">設定</button>
+  </div>
   <div class="space">
     <input id="space-code" placeholder="共享代號（例如 jackwal）" />
-    <button id="btn-connect" class="btn sm">連線</button>
+    <button id="btn-connect" class="btn danger" data-state="off">未連線</button>
   </div>
 </header>
-
-<!-- 頁籤 -->
-<nav class="tabs">
-  <button class="tab active" data-view="book">記帳</button>
-  <button class="tab" data-view="transfer">轉帳</button>
-  <button class="tab" data-view="report">報表</button>
-  <button class="tab" data-view="settings">設定</button>
-</nav>
 
 <main>
   <!-- 記帳頁 -->
   <section id="view-book">
     <section class="card">
-      <div class="row wrap" style="gap:8px">
-        <!-- 支出 / 收入 chips -->
+      <!-- 第一列：支出/收入（無預設） + 日期 -->
+      <div class="row between wrap" style="gap:8px">
         <div class="chip-group" id="chip-io">
-          <button class="chip pill active" data-io="expense">支出</button>
+          <button class="chip pill" data-io="expense">支出</button>
           <button class="chip pill" data-io="income">收入</button>
         </div>
-
-        <!-- 用途：餐廳 / 個人 -->
-        <div class="chip-group" id="chip-scope">
-          <button class="chip pill active" data-scope="restaurant">餐廳</button>
-          <button class="chip pill" data-scope="personal">個人</button>
-        </div>
-
-        <!-- 日期 -->
         <input id="rec-date" type="date" class="elevated" />
       </div>
 
-      <!-- 付費口袋 + 三口袋 -->
-      <div class="row wrap" style="gap:8px;margin-top:8px">
+      <!-- 第二列：付費口袋 + 付款人 -->
+      <div class="row wrap" style="gap:10px;margin-top:10px">
         <label>付費口袋</label>
         <div class="pockets inline">
           <button class="pocket" data-pk="RESTAURANT">
@@ -56,33 +46,46 @@
             <div class="pocket__amt" id="pk-rest">—</div>
           </button>
           <button class="pocket" data-pk="JACK">
-            <div class="pocket__icon">🧍</div>
+            <div class="pocket__icon">🧑‍🍳</div>
             <div class="pocket__name">JACK</div>
             <div class="pocket__amt" id="pk-jack">—</div>
           </button>
           <button class="pocket" data-pk="WAL">
-            <div class="pocket__icon">🧍</div>
+            <div class="pocket__icon">🧑‍🍳</div>
             <div class="pocket__name">WAL</div>
             <div class="pocket__amt" id="pk-wal">—</div>
           </button>
         </div>
 
-        <label id="lbl-who" style="margin-left:10px">付款人</label>
-        <div class="chip-group" id="chip-who"></div>
-
-        <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" style="margin-left:auto;min-width:120px">
+        <label id="lbl-who" style="margin-left:8px">付款人</label>
+        <div class="chip-group" id="chip-who">
+          <!-- 由 JS 依 io=expense/income 注入 J / W / JW 或 J / W -->
+        </div>
       </div>
 
-      <!-- 群組 / 細項 -->
-      <div id="group-panel" class="chip-grid"></div>
-      <div id="items-panel" class="chip-grid soft" style="display:none"></div>
+      <!-- 第三列：金額 + 用途（餐廳 / 個人，無預設） -->
+      <div class="row wrap" style="gap:10px;margin-top:8px">
+        <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" class="amt">
+        <div class="chip-group" id="chip-scope">
+          <button class="chip pill" data-scope="restaurant">餐廳</button>
+          <button class="chip pill" data-scope="personal">個人</button>
+        </div>
+      </div>
 
-      <!-- 手動新增 -->
-      <div class="row wrap" style="gap:8px;margin-top:8px">
+      <!-- 分類：上方大項 / 下方細項（對比） -->
+      <div class="panel panel-cats">
+        <div id="group-panel" class="chip-grid"></div>
+      </div>
+      <div class="panel panel-items">
+        <div id="items-panel" class="chip-grid" style="display:none"></div>
+      </div>
+
+      <!-- 手動新增（只選「大項」，依 io/scope 篩選） -->
+      <div class="row wrap" style="gap:8px;margin-top:10px">
         <input id="rec-item" placeholder="新增項目" />
         <select id="rec-manual-cat"></select>
-        <input id="rec-note" placeholder="備註（選填）" />
-        <button id="rec-submit" class="btn">送出</button>
+        <input id="rec-note" placeholder="備註（可略）" />
+        <button id="rec-submit" class="btn" disabled>送出</button>
       </div>
     </section>
 
@@ -93,24 +96,23 @@
     </section>
   </section>
 
-  <!-- 其他頁 -->
+  <!-- 轉帳 / 報表 / 設定 先放空殼 -->
   <section id="view-transfer" style="display:none" class="card"><b>轉帳（開發中）</b></section>
   <section id="view-report" style="display:none" class="card"><b>報表（開發中）</b></section>
   <section id="view-settings" style="display:none" class="card"><b>設定（開發中）</b></section>
 </main>
 
-<footer class="ft">Made for Jack & Wal · Firebase Realtime DB + 本機快取</footer>
+<footer class="ft">
+  CashFlow v3.5 · Firebase Realtime DB + 本機快取
+</footer>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK (compat 9.x) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
 <script src="app.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 </script>
 </body>
 </html>
