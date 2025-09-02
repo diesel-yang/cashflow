@@ -43,25 +43,55 @@ function dbPath(key){ return `spaces/${state.spaceKey}/${key}`; }
 /* ===============================
    分類：預設一份餐廳導向 + 個人常用
    =============================== */
+// 擁有者（帳本）
+const OWNERS = {
+  RESTAURANT: 'RESTAURANT',
+  JACK: 'JACK',
+  WAL: 'WAL',
+  JW: 'JW' // 共同支出，自動平分到 JACK & WAL
+};
+
+// 分類的 kind：餐廳用於 P&L；個人改用 personal_income/personal_expense
 const DEFAULT_CATS = [
-  // 餐廳收入
-  {label:'現場銷售', kind:'revenue'},
-  {label:'外送平台', kind:'revenue'},
-  {label:'批發/通路', kind:'revenue'},
-  {label:'其他收入', kind:'revenue'},
-  // 餐廳 COGS
-  {label:'食材-肉類', kind:'cogs'},{label:'食材-蔬果', kind:'cogs'},{label:'海鮮', kind:'cogs'},
-  {label:'調味/乾貨', kind:'cogs'},{label:'飲品原料', kind:'cogs'},{label:'包材', kind:'cogs'},
-  {label:'清潔耗材', kind:'cogs'},
-  // 人事/Utilities/行銷/物流/行政
-  {label:'正職薪資', kind:'personnel'},{label:'勞健保', kind:'personnel'},
-  {label:'租金', kind:'utilities'},{label:'水費', kind:'utilities'},{label:'電費', kind:'utilities'},{label:'網路/手機', kind:'utilities'},
-  {label:'廣告行銷', kind:'marketing'},{label:'拍攝設計', kind:'marketing'},
-  {label:'物流運費', kind:'logistics'},
-  {label:'稅捐(5%)', kind:'admin'},{label:'記帳/法律', kind:'admin'},
-  // 個人常用
-  {label:'薪資收入', kind:'revenue'},{label:'利息/股息', kind:'revenue'},
-  {label:'餐飲', kind:'admin'},{label:'交通', kind:'admin'},{label:'油資', kind:'admin'},
+  // 餐廳（營收）
+  { label:'現場銷售',  owner:'RESTAURANT', kind:'revenue' },
+  { label:'外送平台',  owner:'RESTAURANT', kind:'revenue' },
+  { label:'批發/通路', owner:'RESTAURANT', kind:'revenue' },
+  { label:'其他收入',  owner:'RESTAURANT', kind:'revenue' },
+  // 餐廳（COGS）
+  { label:'食材-肉類', owner:'RESTAURANT', kind:'cogs' },
+  { label:'食材-蔬果', owner:'RESTAURANT', kind:'cogs' },
+  { label:'海鮮',      owner:'RESTAURANT', kind:'cogs' },
+  { label:'調味/乾貨', owner:'RESTAURANT', kind:'cogs' },
+  { label:'飲品原料',  owner:'RESTAURANT', kind:'cogs' },
+  { label:'包材',      owner:'RESTAURANT', kind:'cogs' },
+  { label:'清潔耗材',  owner:'RESTAURANT', kind:'cogs' },
+  // 餐廳（費用）
+  { label:'正職薪資',  owner:'RESTAURANT', kind:'personnel' },
+  { label:'勞健保',    owner:'RESTAURANT', kind:'personnel' },
+  { label:'租金',      owner:'RESTAURANT', kind:'utilities' },
+  { label:'水費',      owner:'RESTAURANT', kind:'utilities' },
+  { label:'電費',      owner:'RESTAURANT', kind:'utilities' },
+  { label:'網路/手機',  owner:'RESTAURANT', kind:'utilities' },
+  { label:'廣告行銷',  owner:'RESTAURANT', kind:'marketing' },
+  { label:'物流運費',  owner:'RESTAURANT', kind:'logistics' },
+  { label:'工具器具',  owner:'RESTAURANT', kind:'admin' },
+  { label:'稅捐/法務', owner:'RESTAURANT', kind:'admin' },
+
+  // 個人（JACK/WAL）：收入/支出只做個人理財，不進 P&L
+  { label:'薪資收入',  owner:'JACK', kind:'personal_income' },
+  { label:'其他收入',  owner:'JACK', kind:'personal_income' },
+  { label:'餐飲',      owner:'JACK', kind:'personal_expense' },
+  { label:'交通',      owner:'JACK', kind:'personal_expense' },
+  { label:'購物',      owner:'JACK', kind:'personal_expense' },
+  { label:'醫療',      owner:'JACK', kind:'personal_expense' },
+
+  { label:'薪資收入',  owner:'WAL', kind:'personal_income' },
+  { label:'其他收入',  owner:'WAL', kind:'personal_income' },
+  { label:'餐飲',      owner:'WAL', kind:'personal_expense' },
+  { label:'交通',      owner:'WAL', kind:'personal_expense' },
+  { label:'購物',      owner:'WAL', kind:'personal_expense' },
+  { label:'醫療',      owner:'WAL', kind:'personal_expense' },
 ];
 
 /* P&L 欄位順序與名稱 */
