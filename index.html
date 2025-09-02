@@ -4,65 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>極速記帳 v3.3</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin:0; padding:0; height:100%; background:#f3f7f7; color:#173131;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial,sans-serif; }
-    .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
-      padding:12px 14px; background:#1a7b7b; color:#fff; }
-    .brand { font-weight:800; letter-spacing:.5px; }
-    .month-nav { display:flex; align-items:center; gap:8px; }
-    .icon-btn { border:0; border-radius:10px; background:#147171; color:#fff; width:34px; height:34px; font-size:18px; line-height:34px; cursor:pointer; }
-    .icon-btn:active { transform:translateY(1px); }
-    .month-label { background:#198f8f; padding:6px 10px; border-radius:10px; font-weight:700; }
-    .tabs { display:flex; gap:10px; padding:10px; background:#e8f2f2; justify-content:space-around; position:sticky; top:54px; z-index:9; }
-    .tab { flex:1; border:0; border-radius:10px; padding:12px 10px; cursor:pointer; background:#fff; font-weight:700; color:#166; text-align:center;
-      box-shadow:0 1px 0 rgba(0,0,0,.03); }
-    .tab--active { background:#1a7b7b; color:#fff; }
-    .container { padding:12px; max-width:980px; margin:0 auto; }
-    .page { display:none; padding-bottom:24px; }
-    .page.active { display:block; }
-    .card { background:#fff; border-radius:14px; padding:14px; margin:10px 0; box-shadow:0 2px 0 rgba(0,0,0,.03); }
-    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; }
-    .row + .row { border-top:1px dashed #d7e6e6; }
-    .muted { color:#6d8c8c; font-size:12px; }
-    hr { border:0; border-top:1px solid #e7efef; margin:10px 0; }
-    .ctrl-row { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
-    .check { display:flex; align-items:center; gap:6px; font-weight:600; color:#155; }
-    .check input { width:18px; height:18px; }
-    .btn { appearance:none; border:0; border-radius:10px; padding:12px 14px; font-weight:800; background:#1a7b7b; color:#fff; cursor:pointer; }
-    .btn.ghost { background:#e9f3f3; color:#166; }
-    input, select, textarea { width:100%; padding:10px 12px; border:1px solid #cfe3e3; border-radius:10px; }
-    .footer { padding:22px 12px; text-align:center; color:#6d8c8c; font-size:13px; }
-  </style>
-
-  <!-- Firebase（以 ES Modules 形式載入，並把需要的 API 掛到 window，配合你的 app.js 寫法） -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-    // 供 app.js 取得
-    window.firebase        = { initializeApp };
-    window.firebaseDatabase = { getDatabase, ref, onValue, get, set, update };
-    // 你的雲端設定
-    window.firebaseConfig = {
-      apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
-      authDomain: "cashflow-71391.firebaseapp.com",
-      databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "cashflow-71391",
-      storageBucket: "cashflow-71391.firebasestorage.app",
-      messagingSenderId: "204834375477",
-      appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
-      measurementId: "G-G2DVG798M8"
-    };
-  </script>
+  <link rel="stylesheet" href="stgyle.css" />
 </head>
 <body>
   <div class="topbar">
     <div class="brand">極速記帳 v3.3</div>
     <div class="month-nav">
-      <button id="mon-prev" class="icon-btn" aria-label="前一月">‹</button>
+      <button id="mon-prev" class="icon-btn">‹</button>
       <div id="currentMonthLabel" class="month-label">—</div>
-      <button id="mon-next" class="icon-btn" aria-label="下一月">›</button>
+      <button id="mon-next" class="icon-btn">›</button>
     </div>
   </div>
 
@@ -74,57 +24,33 @@
   </div>
 
   <div class="container">
-    <!-- 記帳：表單元件（直接送 CF API） -->
+    <!-- 記帳 -->
     <section class="page active" id="page-rec">
       <div class="card">
-        <div class="row"><div style="font-weight:700">新增一筆記錄</div></div>
-        <div class="ctrl-row">
-          <div style="flex:1">
-            <label class="muted">Owner</label>
-            <select id="rec-owner">
-              <option value="RESTAURANT" selected>RESTAURANT（餐廳）</option>
-              <option value="JACK">JACK</option>
-              <option value="WAL">WAL</option>
-              <option value="JW">JW（共同）</option>
-            </select>
-          </div>
-          <div style="flex:1">
-            <label class="muted">Who</label>
-            <select id="rec-who">
-              <option value="JACK" selected>JACK</option>
-              <option value="WAL">WAL</option>
-              <option value="RESTAURANT">RESTAURANT</option>
-            </select>
-          </div>
+        <div class="row"><b>新增記帳</b></div>
+        <div class="row">
+          <select id="rec-owner">
+            <option value="RESTAURANT">RESTAURANT</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="JW">JW（共同）</option>
+          </select>
+          <select id="rec-who">
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+            <option value="RESTAURANT">RESTAURANT</option>
+          </select>
         </div>
-        <div class="ctrl-row">
-          <div style="flex:1.6">
-            <label class="muted">分類（cat）</label>
-            <input id="rec-cat" placeholder="例如：食材-肉類 / 餐飲 / 個人收入" />
-          </div>
-          <div style="flex:.9">
-            <label class="muted">金額（amt）</label>
-            <input id="rec-amt" type="number" inputmode="decimal" placeholder="0" />
-          </div>
+        <div class="row">
+          <input id="rec-cat" placeholder="分類（例如：食材-肉類 / 飲食）" />
+          <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" />
         </div>
-        <div class="ctrl-row">
-          <div style="flex:1">
-            <label class="muted">備註（note）</label>
-            <input id="rec-note" placeholder="（選填）" />
-          </div>
+        <div class="row">
+          <input id="rec-note" placeholder="備註" />
         </div>
-        <div class="ctrl-row">
-          <button id="rec-expense" class="btn">記錄支出</button>
-          <button id="rec-income" class="btn ghost">記錄收入</button>
-        </div>
-      </div>
-
-      <!-- 你可保留/調整下面示範快捷 -->
-      <div class="card">
-        <div class="row"><div style="font-weight:700">快捷</div><div class="muted">點擊直接記帳</div></div>
-        <div class="ctrl-row">
-          <button class="btn ghost" onclick="window.CF?.runQuick && CF.runQuick('午餐-餐飲')">午餐-餐飲</button>
-          <button class="btn ghost" onclick="window.CF?.runQuick && CF.runQuick('食材-肉類')">食材-肉類</button>
+        <div class="row" style="gap:10px">
+          <button id="rec-expense" class="btn">支出</button>
+          <button id="rec-income" class="btn btn--ghost">收入</button>
         </div>
       </div>
     </section>
@@ -132,48 +58,34 @@
     <!-- 轉帳 -->
     <section class="page" id="page-trf">
       <div class="card">
-        <div class="row"><div style="font-weight:700">建立轉帳/還款</div></div>
-        <div class="ctrl-row">
-          <div style="flex:1">
-            <label class="muted">From</label>
-            <select id="xfer-from">
-              <option value="">請選擇</option>
-              <option>餐廳_銀行</option>
-              <option>餐廳_現金</option>
-              <option>JACK</option>
-              <option>WAL</option>
-            </select>
-          </div>
-          <div style="flex:1">
-            <label class="muted">To</label>
-            <select id="xfer-to">
-              <option value="">請選擇</option>
-              <option>餐廳_銀行</option>
-              <option>餐廳_現金</option>
-              <option>JACK</option>
-              <option>WAL</option>
-            </select>
-          </div>
+        <div class="row"><b>建立轉帳 / 還款</b></div>
+        <div class="row">
+          <label>From</label>
+          <select id="xfer-from">
+            <option value="餐廳_銀行">餐廳_銀行</option>
+            <option value="餐廳_現金">餐廳_現金</option>
+            <option value="餐廳_基金帳">餐廳_基金帳</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+          </select>
         </div>
-        <div class="ctrl-row">
-          <div style="flex:1">
-            <label class="muted">金額</label>
-            <input id="xfer-amt" type="number" inputmode="decimal" placeholder="0" />
-          </div>
-          <div style="flex:1">
-            <label class="muted">備註</label>
-            <input id="xfer-note" placeholder="（選填）" />
-          </div>
+        <div class="row">
+          <label>To</label>
+          <select id="xfer-to">
+            <option value="餐廳_銀行">餐廳_銀行</option>
+            <option value="餐廳_現金">餐廳_現金</option>
+            <option value="餐廳_基金帳">餐廳_基金帳</option>
+            <option value="JACK">JACK</option>
+            <option value="WAL">WAL</option>
+          </select>
         </div>
-        <div class="ctrl-row">
+        <div class="row"><input id="xfer-amt" type="number" placeholder="金額" /></div>
+        <div class="row"><input id="xfer-note" placeholder="備註" /></div>
+        <div class="row" style="justify-content:flex-end">
           <button id="xfer-submit" class="btn">建立轉帳</button>
         </div>
       </div>
-
-      <div class="card">
-        <div class="row"><div style="font-weight:700">本月轉帳紀錄</div></div>
-        <div id="transfer-list" class="report-box"></div>
-      </div>
+      <div id="transfer-list"></div>
     </section>
 
     <!-- 報表 -->
@@ -182,7 +94,7 @@
         <div class="ctrl-row">
           <label class="check"><input type="checkbox" id="rep-expand" /> 明細展開</label>
           <label class="check"><input type="checkbox" id="rep-by-kind" /> 按類型小計</label>
-          <button class="btn ghost" onclick="window.CF?.refresh && CF.refresh()">重新整理</button>
+          <button class="btn btn--ghost" onclick="CF.refresh()">重新整理</button>
         </div>
       </div>
       <div id="report-box" class="report-box"></div>
@@ -191,26 +103,24 @@
     <!-- 設定 -->
     <section class="page" id="page-set">
       <div class="card">
-        <div class="row"><div style="font-weight:700">共享空間</div></div>
-        <div class="ctrl-row">
-          <input id="space-code" placeholder="輸入共享代號（如 my-shop）" style="flex:1" />
+        <div class="row"><b>共享空間</b></div>
+        <div class="row">
+          <input id="space-code" placeholder="輸入共享代號" />
           <button id="space-apply" class="btn">套用</button>
         </div>
-        <div class="muted">同一代號的裝置會同步同一個 Realtime Database 節點。</div>
       </div>
-
       <div class="card">
-        <div class="row"><div style="font-weight:700">分類管理</div></div>
-        <div class="ctrl-row">
-          <input id="cat-new" placeholder="分類名稱（例如：食材-肉類）" style="flex:2" />
-          <select id="cat-kind" style="flex:1">
+        <div class="row"><b>分類管理</b></div>
+        <div class="row">
+          <input id="cat-new" placeholder="分類名稱" />
+          <select id="cat-kind">
             <option value="revenue">revenue</option>
             <option value="cogs">cogs</option>
             <option value="personnel">personnel</option>
             <option value="utilities">utilities</option>
             <option value="marketing">marketing</option>
             <option value="logistics">logistics</option>
-            <option value="admin" selected>admin</option>
+            <option value="admin">admin</option>
             <option value="p_income">p_income</option>
             <option value="p_expense">p_expense</option>
           </select>
@@ -218,88 +128,38 @@
         </div>
         <div id="cat-list"></div>
       </div>
-
       <div class="card" id="quick-form">
-        <div class="row"><div style="font-weight:700">快捷管理</div></div>
-        <div class="ctrl-row">
-          <input id="q-label" placeholder="快捷名稱（如：午餐-餐飲）" style="flex:2" />
-          <select id="q-type" style="flex:1">
-            <option value="expense" selected>expense</option>
-            <option value="income">income</option>
-          </select>
-        </div>
-        <div class="ctrl-row">
-          <input id="q-cat" placeholder="分類（如：餐飲 / 食材-肉類）" style="flex:2" />
-          <input id="q-amt" type="number" inputmode="decimal" placeholder="金額" style="flex:1" />
-        </div>
-        <div class="ctrl-row">
-          <select id="q-owner" style="flex:1">
-            <option value="RESTAURANT" selected>RESTAURANT</option>
-            <option value="JACK">JACK</option>
-            <option value="WAL">WAL</option>
-            <option value="JW">JW（共同）</option>
-          </select>
-          <select id="q-who" style="flex:1">
-            <option value="JACK" selected>JACK</option>
-            <option value="WAL">WAL</option>
-            <option value="RESTAURANT">RESTAURANT</option>
-          </select>
-          <button id="quick-save" class="btn" style="flex:1">儲存/覆寫</button>
-        </div>
+        <div class="row"><b>快捷管理</b></div>
+        <div class="row"><input id="q-label" placeholder="名稱" /></div>
+        <div class="row"><input id="q-cat" placeholder="分類" /></div>
+        <div class="row"><input id="q-amt" type="number" placeholder="金額" /></div>
+        <div class="row"><select id="q-type"><option value="expense">expense</option><option value="income">income</option></select></div>
+        <div class="row"><select id="q-owner"><option>RESTAURANT</option><option>JACK</option><option>WAL</option><option>JW</option></select></div>
+        <div class="row"><select id="q-who"><option>JACK</option><option>WAL</option><option>RESTAURANT</option></select></div>
+        <div class="row"><button id="quick-save" class="btn">儲存/覆寫</button></div>
         <div id="quick-list"></div>
       </div>
-
-      <div class="card">
-        <div class="row"><div style="font-weight:700">本機快取</div></div>
-        <button id="reset-local" class="btn ghost">清除本機快取（不影響雲端）</button>
-      </div>
+      <div class="card"><button id="reset-local" class="btn btn--ghost">清除本機快取</button></div>
     </section>
 
-    <div class="footer"><span id="footer-version">極速記帳 v3.3</span></div>
+    <div class="footer"><span id="footer-version"></span></div>
   </div>
 
-  <!-- 主程式 -->
-  <script src="app.js?v=v17.2-pl"></script>
-
-  <!-- Tabs 切換（不干擾 app.js） -->
+  <script src="app.js?v=v17.4"></script>
   <script>
-    const tabBtns = Array.from(document.querySelectorAll('.tab'));
+    const tabBtns = document.querySelectorAll('.tab');
     const pages = {
       rec: document.getElementById('page-rec'),
       trf: document.getElementById('page-trf'),
       rep: document.getElementById('page-rep'),
       set: document.getElementById('page-set'),
     };
-    function switchTab(key){
-      for (const k in pages) pages[k].classList.toggle('active', k===key);
-      tabBtns.forEach(b=>b.classList.toggle('tab--active', b.dataset.tab===key));
-      if (key==='rep' && window.renderReport) window.renderReport();
-      if (window.scrollY>0) window.scrollTo({top:0,behavior:'smooth'});
-    }
-    tabBtns.forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
-
-    // 記帳表單事件 → 直接丟 CF API
-    function getRecForm() {
-      return {
-        owner: document.getElementById('rec-owner').value,
-        who:   document.getElementById('rec-who').value,
-        cat:   document.getElementById('rec-cat').value.trim(),
-        amt:   Number(document.getElementById('rec-amt').value||0),
-        note:  document.getElementById('rec-note').value.trim()
-      };
-    }
-    document.getElementById('rec-expense').addEventListener('click', async ()=>{
-      const p = getRecForm(); if(!p.cat || !p.amt) return alert('請填齊「分類 / 金額」');
-      await window.CF?.addExpense?.(p);
-      document.getElementById('rec-amt').value='';
-      document.getElementById('rec-note').value='';
-    });
-    document.getElementById('rec-income').addEventListener('click', async ()=>{
-      const p = getRecForm(); if(!p.cat || !p.amt) return alert('請填齊「分類 / 金額」');
-      await window.CF?.addIncome?.(p);
-      document.getElementById('rec-amt').value='';
-      document.getElementById('rec-note').value='';
-    });
+    tabBtns.forEach(b=> b.addEventListener('click', ()=>{
+      const key=b.dataset.tab;
+      for(const k in pages){ pages[k].classList.toggle('active',k===key); }
+      tabBtns.forEach(x=>x.classList.toggle('tab--active',x.dataset.tab===key));
+      if(key==='rep' && window.renderReport) renderReport();
+    }));
   </script>
 </body>
 </html>
