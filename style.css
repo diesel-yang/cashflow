@@ -106,3 +106,70 @@ main{padding:12px;display:grid;gap:16px}
 
 /* Footer */
 .foot{padding:14px 12px;color:var(--muted);text-align:center}
+
+/* ============ 連線按鈕：未連紅色、已連藍綠 ============ */
+.btn-elevated.danger{
+  border:1px solid #5a1f27;
+  background: linear-gradient(180deg, #7a2330 0%, #b33848 100%);
+  color:#fff;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.07) inset,
+    0 10px 24px rgba(0,0,0,.45),
+    0 0 0 2px rgba(179,56,72,.18);
+}
+
+/* ============ 區塊齊寬：與下方「三口袋」完全對齊 ============ */
+/* 頂部 ①「支出/收入｜金額｜日期」用三等分，等寬對齊 pockets  */
+.top-eqgrid{
+  display:grid; gap:12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+#chip-io.two{
+  display:grid; gap:10px;         /* 兩顆堆疊更好點 */
+  grid-auto-rows: minmax(var(--tap), auto);
+}
+#rec-amt.center{ text-align:center; font-size:22px; font-weight:800; letter-spacing:.02em }
+#rec-date{ text-align:center }
+
+/* 日期外層讓高度與其他元件一致 */
+.date-wrap{ height:var(--tap) }
+.date-wrap > .elevated{ width:100%; height:100% }
+
+/* ============ Room（共享代號）置中文字 ============ */
+#room{ text-align:center }
+
+/* ============ 「分類大項/項目/用途」— 大一號 + 更大字距 ============ */
+#chip-scope .chip,
+#group-grid .chip.box,
+#items-grid .chip.box{
+  min-height:56px;
+  font-size:18px;
+  letter-spacing:.4px;
+}
+#group-grid .emoji, #items-grid .emoji{ font-size:22px; }
+
+/* 點擊高亮時，同步讓文字更大更粗（視覺更明顯） */
+.chip.active .label{ font-weight:800; font-size:19px; }
+
+/* ============ 新增項目／備註＋送出：齊三欄寬、與口袋對齊 ============ */
+.row.cols-3{
+  display:grid; gap:12px;
+  grid-template-columns: repeat(3, 1fr);
+  align-items:stretch;
+}
+.span-2{ grid-column: span 2; }
+.btn-elevated, .chip{ min-height: var(--tap) }
+
+/* 送出與新增：同色字，字距放大；四顆高度一致（已由 min-height 控） */
+.btn-elevated.primary,
+.btn-elevated.ghost{ color:#f6fbff; letter-spacing:.04em }
+
+/* ============ 清楚的區塊上下距（避免緊貼） ============ */
+.card > * + *{ margin-top:12px }
+.card{ margin-bottom:16px }
+
+/* ============ 用途兩顆鈕等寬撐滿（維持原本樣式） ============ */
+#chip-scope.chip-group.wide{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:10px; flex:1; margin-left:12px;
+}
+#chip-scope .chip{ width:100%; justify-content:center; border-radius:12px }
