@@ -26,69 +26,64 @@
 <main>
   <!-- 記帳頁 -->
   <section id="view-book">
-    <section class="card">
-      <!-- 第一列：支出/收入（無預設） + 日期 -->
-      <div class="row between wrap" style="gap:8px">
-        <div class="chip-group" id="chip-io">
-          <button class="chip pill" data-io="expense">支出</button>
-          <button class="chip pill" data-io="income">收入</button>
-        </div>
-        <input id="rec-date" type="date" class="elevated" />
-      </div>
+    <!-- 放在 <section id="view-book"> 裡、原本那塊整段替換 -->
+<section class="card">
 
-      <!-- 第二列：付費口袋 + 付款人 -->
-      <div class="row wrap" style="gap:10px;margin-top:10px">
-        <label>付費口袋</label>
-        <div class="pockets inline">
-          <button class="pocket" data-pk="RESTAURANT">
-            <div class="pocket__icon">🏪</div>
-            <div class="pocket__name">餐廳</div>
-            <div class="pocket__amt" id="pk-rest">—</div>
-          </button>
-          <button class="pocket" data-pk="JACK">
-            <div class="pocket__icon">🧑‍🍳</div>
-            <div class="pocket__name">JACK</div>
-            <div class="pocket__amt" id="pk-jack">—</div>
-          </button>
-          <button class="pocket" data-pk="WAL">
-            <div class="pocket__icon">🧑‍🍳</div>
-            <div class="pocket__name">WAL</div>
-            <div class="pocket__amt" id="pk-wal">—</div>
-          </button>
-        </div>
+  <!-- 列 1：支出/收入 + 日期 -->
+  <div class="row between wrap gap8">
+    <div class="chip-group" id="chip-io">
+      <button class="chip pill lg" data-io="expense">支出</button>
+      <button class="chip pill lg" data-io="income">收入</button>
+    </div>
+    <input id="rec-date" type="date" class="elevated" />
+  </div>
 
-        <label id="lbl-who" style="margin-left:8px">付款人</label>
-        <div class="chip-group" id="chip-who">
-          <!-- 由 JS 依 io=expense/income 注入 J / W / JW 或 J / W -->
-        </div>
-      </div>
+  <!-- 列 2：付費口袋 + 付款人（人形＋文字） -->
+  <div class="row wrap gap10 mt8">
+    <label>付費口袋</label>
+    <div class="pockets inline scroll-x" id="pockets">
+      <button class="pocket" data-pk="RESTAURANT">
+        <svg viewBox="0 0 64 40" class="pig"><path d="M10 26c0-9 7-16 20-16 10 0 18 6 20 14 4 0 6 3 6 5 0 3-2 5-4 5H40a8 8 0 1 1-16 0H18c-5 0-8-3-8-8Z"/><circle cx="38" cy="18" r="2"/></svg>
+        <div class="pocket__name">餐廳</div>
+        <div class="odometer" id="pk-rest">0</div>
+      </button>
+      <button class="pocket" data-pk="JACK">
+        <svg viewBox="0 0 64 40" class="pig"><path d="M10 26c0-9 7-16 20-16 10 0 18 6 20 14 4 0 6 3 6 5 0 3-2 5-4 5H40a8 8 0 1 1-16 0H18c-5 0-8-3-8-8Z"/><circle cx="38" cy="18" r="2"/></svg>
+        <div class="pocket__name">Jack</div>
+        <div class="odometer" id="pk-jack">0</div>
+      </button>
+      <button class="pocket" data-pk="WAL">
+        <svg viewBox="0 0 64 40" class="pig"><path d="M10 26c0-9 7-16 20-16 10 0 18 6 20 14 4 0 6 3 6 5 0 3-2 5-4 5H40a8 8 0 1 1-16 0H18c-5 0-8-3-8-8Z"/><circle cx="38" cy="18" r="2"/></svg>
+        <div class="pocket__name">Wal</div>
+        <div class="odometer" id="pk-wal">0</div>
+      </button>
+    </div>
 
-      <!-- 第三列：金額 + 用途（餐廳 / 個人，無預設） -->
-      <div class="row wrap" style="gap:10px;margin-top:8px">
-        <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" class="amt">
-        <div class="chip-group" id="chip-scope">
-          <button class="chip pill" data-scope="restaurant">餐廳</button>
-          <button class="chip pill" data-scope="personal">個人</button>
-        </div>
-      </div>
+    <label id="lbl-who">付款人</label>
+    <div class="chip-group" id="chip-who"><!-- 由 JS 注入 --></div>
+  </div>
 
-      <!-- 分類：上方大項 / 下方細項（對比） -->
-      <div class="panel panel-cats">
-        <div id="group-panel" class="chip-grid"></div>
-      </div>
-      <div class="panel panel-items">
-        <div id="items-panel" class="chip-grid" style="display:none"></div>
-      </div>
+  <!-- 列 3：金額 + 用途（無預設） -->
+  <div class="row wrap gap10 mt8">
+    <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" class="amt">
+    <div class="chip-group" id="chip-scope">
+      <button class="chip pill" data-scope="restaurant">餐廳</button>
+      <button class="chip pill" data-scope="personal">個人</button>
+    </div>
+  </div>
 
-      <!-- 手動新增（只選「大項」，依 io/scope 篩選） -->
-      <div class="row wrap" style="gap:8px;margin-top:10px">
-        <input id="rec-item" placeholder="新增項目" />
-        <select id="rec-manual-cat"></select>
-        <input id="rec-note" placeholder="備註（可略）" />
-        <button id="rec-submit" class="btn" disabled>送出</button>
-      </div>
-    </section>
+  <!-- 分類：上＝大項 / 下＝細項（對比色） -->
+  <div class="panel panel-cats"><div id="group-panel" class="chip-grid"></div></div>
+  <div class="panel panel-items"><div id="items-panel" class="chip-grid" style="display:none"></div></div>
 
+  <!-- 手動新增（只選「大項」，依 io/scope 篩選） -->
+  <div class="row wrap gap8 mt10">
+    <input id="rec-item" placeholder="新增項目名稱…" />
+    <select id="rec-manual-cat"></select>
+    <input id="rec-note" placeholder="備註（可省略）" />
+    <button id="rec-submit" class="btn" disabled>送出</button>
+  </div>
+</section>
     <!-- 最近紀錄 -->
     <section class="card">
       <div class="row between"><b>最近 20 筆</b><small class="muted" id="rec-count">0</small></div>
