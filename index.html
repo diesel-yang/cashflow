@@ -35,20 +35,21 @@
     <section id="page-rec" class="page show">
 
       <!-- ① 收支 + 金額 + 日期 -->
-      <div class="card">
-        <div class="row between pack">
-          <div class="chip-group" id="chip-io" role="group" aria-label="收支類型">
-            <button class="chip lg pressable" data-io="expense">支出</button>
-            <button class="chip lg pressable" data-io="income">收入</button>
-          </div>
+<div class="card">
+  <div class="top-eqgrid">
+    <div class="chip-group two" id="chip-io" role="group" aria-label="收支類型">
+      <button class="chip lg pressable" data-io="expense">支出</button>
+      <button class="chip lg pressable" data-io="income">收入</button>
+    </div>
 
-          <input id="rec-amt" type="number" inputmode="decimal" class="amt elevated" placeholder="金額" aria-label="金額">
-          <div class="date-wrap">
-            <span aria-hidden="true">📅</span>
-            <input id="rec-date" type="date" class="elevated" aria-label="日期">
-          </div>
-        </div>
-      </div>
+    <input id="rec-amt" type="number" inputmode="decimal"
+           class="amt elevated center" placeholder="金額" aria-label="金額">
+
+    <div class="date-wrap">
+      <input id="rec-date" type="date" class="elevated" aria-label="日期">
+    </div>
+  </div>
+</div>
 
       <!-- ② 付款口袋 + 付款人/收款人 -->
       <div class="card">
@@ -59,7 +60,7 @@
         <div class="grid grid-3" id="payers-row"></div>
       </div>
 
-      <!-- ③ 用途 / 分類大項 / 項目 -->
+      <!-- ③ 用途 / 類別 / 項目 -->
       <div class="card">
         <div class="scope-head">
           <div class="section-head">用途</div>
@@ -69,22 +70,21 @@
           </div>
         </div>
 
-        <div class="section-head">分類大項</div>
+        <div class="section-head">類別</div>
         <div id="group-grid" class="grid grid-2"></div>
 
         <div class="section-head">項目</div>
         <div id="items-grid" class="grid grid-3"></div>
 
-        <div class="row">
-          <input id="new-cat-name" class="input flex" placeholder="新增項目（名稱）" aria-label="新增項目">
-          <button id="btn-add-cat" class="btn-elevated ghost pressable">新增項目</button>
-        </div>
+<div class="row cols-3">
+  <input id="new-cat-name" class="input span-2" placeholder="新增項目（名稱）" aria-label="新增項目">
+  <button id="btn-add-cat" class="btn-elevated ghost pressable">新增項目</button>
+</div>
 
-        <div class="row">
-          <input id="rec-note" class="input flex" placeholder="備註（可省略）" aria-label="備註">
-          <button id="btn-submit" class="btn-elevated primary pressable">送出</button>
-        </div>
-      </div>
+<div class="row cols-3">
+  <input id="rec-note" class="input span-2" placeholder="備註（可省略）" aria-label="備註">
+  <button id="btn-submit" class="btn-elevated primary pressable">送出</button>
+</div>
 
       <!-- ④ 最近 20 筆 -->
       <div class="card">
