@@ -15,6 +15,42 @@ const firebaseConfig = {
   measurementId: "G-G2DVG798M8"
 };
 
+// 綁定連線按鈕
+const btnConnect = document.getElementById('btn-connect');
+btnConnect.addEventListener('click', async () => {
+  const space = document.getElementById('space-code').value.trim();
+  if (!space) {
+    alert('請輸入共享代號');
+    return;
+  }
+
+  try {
+    // 初始化 Firebase 資料節點
+    const root = ref(db, `rooms/${space}`);
+    const snap = await get(root);
+    if (!snap.exists()) {
+      await set(root, { _ts: Date.now() });
+    }
+
+    // 更新 UI 狀態
+    btnConnect.textContent = '已連線';
+    btnConnect.dataset.state = 'on';
+    btnConnect.classList.remove('danger');
+    btnConnect.classList.add('success');
+
+    // 存下代號
+    localStorage.setItem('CF_SPACE', space);
+
+    // 後續載入 catalog / records
+    await ensureCatalog();
+    watchRecent();
+
+  } catch (err) {
+    console.error('連線失敗', err);
+    alert('❌ 連線失敗：' + err.message);
+  }
+});
+
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 const auth = getAuth(app);
