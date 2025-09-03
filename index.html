@@ -69,36 +69,37 @@
         </div>
       </div>
 
-      <!-- 區塊 ③：用途 / 分類大項 / 項目 -->
-      <div class="card">
-        <div class="row">
-          <div class="subhead">用途</div>
-        </div>
-        <div class="chip-group" id="chip-scope" role="group" aria-label="用途">
-          <button class="chip pill" data-scope="restaurant">餐廳</button>
-          <button class="chip pill" data-scope="personal">個人</button>
-        </div>
+<!-- 區塊 ③：用途 / 分類大項 / 項目 -->
+<div class="card">
+  <!-- 一行：左側「用途」文字，右側兩個選項 -->
+  <div class="scope-row">
+    <div class="subhead">用途</div>
+    <div class="chip-group" id="chip-scope" role="group" aria-label="用途">
+      <button class="chip pill is-option" data-scope="restaurant">餐廳</button>
+      <button class="chip pill is-option" data-scope="personal">個人</button>
+    </div>
+  </div>
 
-        <div class="row mt12">
-          <div class="subhead">分類大項</div>
-        </div>
-        <div id="group-grid" class="chip-grid group-grid" aria-label="分類大項"></div>
+  <div class="row mt12">
+    <div class="subhead">分類大項</div>
+  </div>
+  <div id="group-grid" class="chip-grid group-grid"></div>
 
-        <div class="row mt12">
-          <div class="subhead">項目</div>
-        </div>
-        <div id="items-grid" class="chip-grid items" aria-label="項目"></div>
+  <div class="row mt12">
+    <div class="subhead">項目</div>
+  </div>
+  <div id="items-grid" class="chip-grid items"></div>
 
-        <div class="row mt12">
-          <input id="new-cat-name" class="input flex" placeholder="新增項目（可用：🍕 漢堡）" aria-label="新增項目">
-          <button id="btn-add-cat" class="btn">新增項目</button>
-        </div>
+  <div class="row mt12">
+    <input id="new-cat-name" class="input flex" placeholder="新增項目" aria-label="新增項目">
+    <button id="btn-add-cat" class="btn">新增項目</button>
+  </div>
 
-        <div class="row mt8">
-          <input id="rec-note" class="input flex" placeholder="備註（可省略）" aria-label="備註">
-          <button id="btn-submit" class="btn">送出</button>
-        </div>
-      </div>
+  <div class="row mt8">
+    <input id="rec-note" class="input flex" placeholder="備註（可省略）" aria-label="備註">
+    <button id="btn-submit" class="btn">送出</button>
+  </div>
+</div>
 
       <!-- 區塊 ④：最近 20 筆 -->
       <div class="card">
