@@ -144,3 +144,20 @@ main{padding:12px}
 
 /* Footer */
 .ft{ text-align:center; color:var(--muted); font-size:12px; padding:16px }
+
+/* ── Mobile 改善 ─────────────────────────────────── */
+.topbar{flex-wrap:wrap; gap:8px}
+.topbar .space{flex:1 1 280px}
+#space-code{width:100%; min-width:220px}
+#btn-connect{white-space:nowrap}
+
+@media (max-width:480px){
+  .tabs{order:3; width:100%; padding-top:6px}
+  .topbar .space{order:2; width:100%}
+  .topbar .brand{order:1}
+}
+
+/* 列 1：支出/收入 + 金額 + 日期（會自動換行） */
+.row.stack{gap:8px; flex-wrap:wrap}
+#rec-amt{flex:1 1 140px}
+#rec-date{flex:0 0 auto}
