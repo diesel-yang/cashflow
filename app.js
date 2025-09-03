@@ -290,19 +290,26 @@ function updateConnectBtn(forceConnected){
 
 function bindIOandScope(){
   // 收支
+  const chipIO = document.getElementById('chip-io');
   chipIO.addEventListener('click', e=>{
-    const b = e.target.closest('[data-io]'); if(!b) return;
+    const b = e.target.closest('[data-io]'); 
+    if(!b) return;
     state.io = b.dataset.io;
     setActive(chipIO, b);
     renderPayers();
     renderGroups();
     renderItems();
   });
-  // 用途
+
+  // 用途（餐廳/個人）
+  const chipScope = document.getElementById('chip-scope');
   chipScope.addEventListener('click', e=>{
-    const b = e.target.closest('[data-scope]'); if(!b) return;
+    const b = e.target.closest('[data-scope]');
+    if(!b) return;
     state.scope = b.dataset.scope;
-    setActive(chip-scope, b); // 修正選取
+    setActive(chipScope, b);
+    renderGroups();
+    renderItems();
   });
   // 修正：直接使用 ID 選擇器避免 typo
   chipScope.addEventListener('click', e=>{
