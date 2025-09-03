@@ -1,163 +1,91 @@
 /* ==========================
-   CashFlow v3.5 - style.css
+   CashFlow v3.6 - style.css
    ==========================*/
 
-/* 色票 */
+/* ───────────────────────────── Theme (Dark) */
 :root{
-  --bg:#f3f7f8;
-  --card:#ffffff;
-  --border:#d9e6ea;
-  --text:#12323a;
-  --muted:#6f8891;
-
-  --primary:#0aa7bb;
-  --primary-weak:#e7fafc;
-  --danger:#d64545;
-
-  --cat-bg:#f1f7f8;   /* 大項區塊底色（淺） */
-  --item-bg:#eef2f6;  /* 細項區塊底色（較深，對比） */
+  --bg:#0b1416;
+  --card:#101d21;
+  --text:#e6f2f4;
+  --muted:#9bb3b9;
+  --primary:#0fa4b4;
+  --primary-weak:#0a6d78;
+  --border:#1e2a2d;
+  --chip-bg:#0f1b1e;
+  --chip-active:#113a40;
+  --accent:#fde047;
 }
-
-/* 基本排版 */
 *{box-sizing:border-box}
-html,body{
-  margin:0; padding:0;
-  background:var(--bg); color:var(--text);
-  font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","Segoe UI",Roboto,"Helvetica Neue",Arial
-}
-img{max-width:100%; height:auto; display:block}
-a{color:inherit}
+html,body{margin:0; padding:0; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,'Noto Sans TC',Arial; background:var(--bg); color:var(--text)}
 
-input,select,button{font:inherit}
-input,select{
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:8px 10px;
-  background:#fff;
-  min-height:38px;
-}
-input.amt{min-width:150px}
+/* ───────────────────────────── Layout */
+.topbar{display:flex; align-items:center; gap:12px; padding:10px 12px; position:sticky; top:0; background:var(--bg); z-index:2}
+.brand{display:flex; align-items:center; gap:8px}
+.brand .logo{font-size:24px}
+.brand-name{font-weight:700}
+.brand-sub{font-size:12px; color:var(--muted)}
+.space{flex:1}
+.input{width:100%; background:var(--chip-bg); color:var(--text); border:1px solid var(--border); border-radius:12px; padding:10px 12px}
+.btn{background:var(--primary); color:white; border:none; border-radius:12px; padding:10px 14px; cursor:pointer}
+.btn.on{background:var(--primary-weak)}
 
-.mt8{margin-top:8px}
-.mt10{margin-top:10px}
-.gap8{gap:8px}
-.gap10{gap:10px}
+.tabs{display:flex; gap:8px; padding:8px 12px; position:sticky; top:54px; background:var(--bg); z-index:1}
+.tab{border:1px solid var(--border); background:var(--chip-bg); color:var(--text); padding:8px 12px; border-radius:999px; cursor:pointer}
+.tab.active{background:var(--chip-active); border-color:var(--primary)}
 
-/* 主要按鈕 */
-.btn{
-  background:var(--primary); color:#fff;
-  border:none; border-radius:10px;
-  padding:8px 12px; cursor:pointer
-}
-.btn.ghost{background:#fff; border:1px solid var(--border); color:var(--text)}
-.btn.danger{background:var(--danger)}
-.btn:disabled{opacity:.5; cursor:not-allowed}
+main{padding:8px 12px; display:grid; gap:12px}
+.page{display:none}
+.page.show{display:block}
 
-/* 頂部列 */
-.topbar{
-  position:sticky; top:0; z-index:5;
-  background:#fff; border-bottom:1px solid var(--border);
-  padding:8px 12px; display:flex; align-items:center;
-  gap:10px; justify-content:space-between
-}
-.space{display:flex; gap:6px}
+.card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; display:grid; gap:12px}
+.section-title{color:var(--muted); margin-bottom:6px}
+.row{display:flex; align-items:center; gap:10px}
+.row.stack{flex-wrap:wrap}
+.row.split{display:flex; flex-wrap:wrap; gap:10px}
+.flex{flex:1}
 
-/* Tabs */
-.tabs{display:flex; gap:8px; overflow-x:auto}
-.tab{
-  background:#fff; border:1px solid var(--border);
-  border-radius:999px; padding:6px 12px;
-  cursor:pointer; white-space:nowrap
-}
-.tab.active{background:var(--primary-weak); border-color:#bfeef5}
+/* ───────────────────────────── Chips */
+.chip-group{display:flex; gap:8px; flex-wrap:wrap}
+.chip{border:1px solid var(--border); background:var(--chip-bg); color:var(--text); border-radius:12px; padding:8px 12px; cursor:pointer}
+.chip.pill{border-radius:999px}
+.chip.lg{font-size:16px}
+.chip.xl{font-size:18px; padding:12px 14px}
+.chip.active{background:var(--chip-active); border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset}
+.chip-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.chip-grid.items .chip{justify-self:stretch; text-align:center}
+.emoji{margin-right:6px}
 
-/* 主要布局 */
-main{padding:12px}
-.card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px;
-  margin-bottom:12px
-}
-.row{display:flex; align-items:center}
-.row.wrap{flex-wrap:wrap}
-.row.between{justify-content:space-between}
-.muted{color:var(--muted)}
+/* ───────────────────────────── Inputs */
+.amt{min-width:140px}
+.elevated{border-radius:12px; border:1px solid var(--border); background:var(--chip-bg); color:var(--text); padding:10px 12px}
+input::placeholder{color:var(--muted)}
 
-.list{list-style:none; margin:0; padding:0}
-.list li{
-  display:flex; gap:8px; padding:8px;
-  border-bottom:1px dashed var(--border)
-}
+/* ───────────────────────────── Pockets / Payers */
+.pockets, .payers{display:flex; gap:10px; flex-wrap:wrap}
+.pocket{position:relative; min-width:110px; padding:10px 12px; border-radius:14px;
+  border:1px solid var(--border); background: var(--card); cursor:pointer}
+.pocket .balance{position:absolute; right:10px; top:-14px; padding:4px 10px; border-radius:10px;
+  background:#0f1b1e; color:#fff; font-weight:700}
+.pocket.active{outline:2px solid var(--primary)}
 
-/* Chips */
-.chip-group{display:flex; gap:8px; overflow-x:auto}
-.chip{
-  border:1px solid var(--border); background:#fff;
-  border-radius:999px; padding:8px 12px; cursor:pointer; text-align:center
-}
-.chip.pill.lg{font-weight:700; padding:10px 16px}
-.chip.sm{padding:4px 8px}
-.chip.active{background:var(--primary-weak); border-color:#bfeef5}
+.payer{min-width:60px}
+.payer.active{background:var(--chip-active); border-color:var(--primary)}
 
-/* Date 輕浮雕 */
-.elevated{
-  border-color:#b7dce5;
-  box-shadow:0 1px 0 rgba(0,0,0,.02), 0 2px 8px rgba(10,167,187,.08)
-}
+/* ───────────────────────────── Recent list */
+.list{display:grid; gap:8px}
+.row.recent{display:grid; grid-template-columns: 100px 1fr auto; gap:8px; align-items:center; padding:8px; background:var(--chip-bg); border:1px solid var(--border); border-radius:12px}
+.r-date{color:var(--muted)}
+.r-amt{font-weight:700}
+.r-amt.pos{color:#71e6a0}
+.r-amt.neg{color:#f39b9b}
 
-/* 分類/項目 面板（對比） */
-.panel{
-  border:1px solid var(--border);
-  border-radius:14px; padding:10px; margin-top:10px
-}
-.panel-cats{background:var(--cat-bg)}
-.panel-items{background:var(--item-bg)}
+/* ───────────────────────────── Footer */
+.foot{padding:14px 12px; color:var(--muted); text-align:center}
 
-/* 網格自適應（桌機 4 欄、小螢幕 3/2 欄） */
-.chip-grid{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:10px
-}
-@media (max-width:520px){ .chip-grid{grid-template-columns:repeat(3,1fr)} }
-@media (max-width:380px){ .chip-grid{grid-template-columns:repeat(2,1fr)} }
-
-/* 口袋（可點）＋豬撲滿＋odometer 數字 */
-.pockets.inline{flex:1; display:flex; gap:8px}
-.scroll-x{overflow-x:auto}
-
-.pocket{
-  position:relative; flex:1; min-width:140px;
-  background:#fbfefe; border:1px solid #d9eef1; border-radius:12px;
-  padding:8px 10px; display:flex; align-items:center; gap:8px;
-  cursor:pointer; user-select:none
-}
-.pocket.selected{outline:2px solid var(--primary)}
-.pocket .pig{width:28px; height:18px; fill:#cfeff3}
-.pocket__name{font-size:12px; color:var(--muted)}
-.odometer{
-  margin-left:auto; font-variant-numeric:tabular-nums; letter-spacing:.5px;
-  font-weight:800; background:#0a2b32; color:#dff7fb;
-  padding:4px 8px; border-radius:8px
-}
-.pocket.negative .odometer{background:#3a0b0b; color:#ffd9d9}
-
-/* Footer */
-.ft{ text-align:center; color:var(--muted); font-size:12px; padding:16px }
-
-/* ── Mobile 改善 ─────────────────────────────────── */
-.topbar{flex-wrap:wrap; gap:8px}
-.topbar .space{flex:1 1 280px}
-#space-code{width:100%; min-width:220px}
-#btn-connect{white-space:nowrap}
-
+/* ───────────────────────────── Mobile */
 @media (max-width:480px){
-  .tabs{order:3; width:100%; padding-top:6px}
-  .topbar .space{order:2; width:100%}
-  .topbar .brand{order:1}
+  .topbar{flex-wrap:wrap}
+  .tabs{top:auto; position:static}
+  .chip-grid{grid-template-columns:repeat(2,1fr)}
+  .row.recent{grid-template-columns: 84px 1fr auto}
 }
-
-/* 列 1：支出/收入 + 金額 + 日期（會自動換行） */
-.row.stack{gap:8px; flex-wrap:wrap}
-#rec-amt{flex:1 1 140px}
-#rec-date{flex:0 0 auto}
