@@ -280,11 +280,12 @@ function bindConnect(){
     updateConnectBtn(true);
   };
 }
-function updateConnectBtn(connected){
-  const isOn = (connected || ROOM);
+function updateConnectBtn(forceConnected){
+  const isOn = !!(forceConnected || ROOM);
   btnConnect.textContent = isOn ? '連線中' : '未連線';
-  if(isOn){ btnConnect.classList.add('primary'); }
-  else { btnConnect.classList.remove('primary'); }
+  btnConnect.classList.remove('primary','danger');
+  // 已連：藍綠；未連：紅色
+  btnConnect.classList.add(isOn ? 'primary' : 'danger');
 }
 
 function bindIOandScope(){
