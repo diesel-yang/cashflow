@@ -1,91 +1,96 @@
-/* ==========================
-   CashFlow v3.6 - style.css
-   ==========================*/
-
-/* ───────────────────────────── Theme (Dark) */
+/* ───────── Theme：高對比深色 */
 :root{
-  --bg:#0b1416;
-  --card:#101d21;
-  --text:#e6f2f4;
-  --muted:#9bb3b9;
-  --primary:#0fa4b4;
-  --primary-weak:#0a6d78;
-  --border:#1e2a2d;
-  --chip-bg:#0f1b1e;
-  --chip-active:#113a40;
-  --accent:#fde047;
+  --bg:#0a0f11;          /* 背景更深，突顯卡片 */
+  --card:#10191c;        /* 卡片 */
+  --text:#f3fbfd;        /* 主要文字偏亮 */
+  --muted:#a8c0c7;       /* 次要文字 */
+  --primary:#12b4c4;     /* 主色：青綠 */
+  --primary-weak:#0f8f9b;
+  --border:#203033;      /* 邊框 */
+  --chip-bg:#0f1719;     /* Chip 背景 */
+  --chip-active:#0f2f35; /* Chip 選中背景 */
+  --badge:#0d2226;       /* 口袋餘額牌 */
+  --pos:#76e3a8;
+  --neg:#ff9aa0;
 }
 *{box-sizing:border-box}
-html,body{margin:0; padding:0; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,'Noto Sans TC',Arial; background:var(--bg); color:var(--text)}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;background:var(--bg);color:var(--text)}
 
-/* ───────────────────────────── Layout */
-.topbar{display:flex; align-items:center; gap:12px; padding:10px 12px; position:sticky; top:0; background:var(--bg); z-index:2}
-.brand{display:flex; align-items:center; gap:8px}
+/* ───────── Topbar & Tabs */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 12px;position:sticky;top:0;background:var(--bg);z-index:3}
+.brand{display:flex;align-items:center;gap:8px}
 .brand .logo{font-size:24px}
 .brand-name{font-weight:700}
-.brand-sub{font-size:12px; color:var(--muted)}
+.brand-sub{font-size:12px;color:var(--muted)}
 .space{flex:1}
-.input{width:100%; background:var(--chip-bg); color:var(--text); border:1px solid var(--border); border-radius:12px; padding:10px 12px}
-.btn{background:var(--primary); color:white; border:none; border-radius:12px; padding:10px 14px; cursor:pointer}
+
+.input{width:100%;background:var(--chip-bg);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.btn{background:var(--primary);color:#001114;border:none;border-radius:12px;padding:12px 14px;font-weight:700;cursor:pointer}
 .btn.on{background:var(--primary-weak)}
 
-.tabs{display:flex; gap:8px; padding:8px 12px; position:sticky; top:54px; background:var(--bg); z-index:1}
-.tab{border:1px solid var(--border); background:var(--chip-bg); color:var(--text); padding:8px 12px; border-radius:999px; cursor:pointer}
-.tab.active{background:var(--chip-active); border-color:var(--primary)}
+.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:54px;background:var(--bg);z-index:2}
+.tab{border:1px solid var(--border);background:var(--chip-bg);color:var(--text);padding:9px 13px;border-radius:999px;cursor:pointer}
+.tab.active{background:var(--chip-active);border-color:var(--primary)}
 
-main{padding:8px 12px; display:grid; gap:12px}
+main{padding:8px 12px;display:grid;gap:12px}
 .page{display:none}
 .page.show{display:block}
 
-.card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; display:grid; gap:12px}
-.section-title{color:var(--muted); margin-bottom:6px}
-.row{display:flex; align-items:center; gap:10px}
-.row.stack{flex-wrap:wrap}
-.row.split{display:flex; flex-wrap:wrap; gap:10px}
-.flex{flex:1}
+/* ───────── Cards / Headings */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 12px 14px;display:grid;gap:12px}
+.section-head{font-size:14px;font-weight:800;color:var(--text);letter-spacing:.04em}
+.subhead{font-size:13px;font-weight:700;color:var(--muted)}
+.mt8{margin-top:8px}.mt12{margin-top:12px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pack{justify-content:space-between}
 
-/* ───────────────────────────── Chips */
-.chip-group{display:flex; gap:8px; flex-wrap:wrap}
-.chip{border:1px solid var(--border); background:var(--chip-bg); color:var(--text); border-radius:12px; padding:8px 12px; cursor:pointer}
+/* ───────── Chips（統一尺寸＋觸控區） */
+.chip{border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:48px}
 .chip.pill{border-radius:999px}
 .chip.lg{font-size:16px}
-.chip.xl{font-size:18px; padding:12px 14px}
-.chip.active{background:var(--chip-active); border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset}
-.chip-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
-.chip-grid.items .chip{justify-self:stretch; text-align:center}
-.emoji{margin-right:6px}
+.chip.box{width:100%;justify-content:flex-start}
+.chip.active{background:var(--chip-active);border-color:var(--primary);box-shadow:0 0 0 1px var(--primary) inset}
 
-/* ───────────────────────────── Inputs */
-.amt{min-width:140px}
-.elevated{border-radius:12px; border:1px solid var(--border); background:var(--chip-bg); color:var(--text); padding:10px 12px}
+.emoji{width:22px;height:22px;display:inline-grid;place-items:center;font-size:20px;line-height:1}  /* 統一 icon 尺寸 */
+.label{flex:1}
+
+/* ───────── Grids */
+.grid{display:grid;gap:10px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:480px){
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+}
+
+.chip-grid{display:grid;gap:10px}
+.group-grid{grid-template-columns:repeat(2,1fr)}
+@media (min-width:520px){ .group-grid{grid-template-columns:repeat(3,1fr)} }
+.items{grid-template-columns:repeat(3,1fr)}
+
+/* ───────── Inputs */
+.amt{min-width:140px;background:var(--chip-bg);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.elevated{border-radius:12px;border:1px solid var(--border);background:var(--chip-bg);color:var(--text);padding:12px 14px}
 input::placeholder{color:var(--muted)}
+.date-wrap{display:flex;align-items:center;gap:6px}
+.i-cal{filter:brightness(1.2)}
 
-/* ───────────────────────────── Pockets / Payers */
-.pockets, .payers{display:flex; gap:10px; flex-wrap:wrap}
-.pocket{position:relative; min-width:110px; padding:10px 12px; border-radius:14px;
-  border:1px solid var(--border); background: var(--card); cursor:pointer}
-.pocket .balance{position:absolute; right:10px; top:-14px; padding:4px 10px; border-radius:10px;
-  background:#0f1b1e; color:#fff; font-weight:700}
-.pocket.active{outline:2px solid var(--primary)}
+/* ───────── Pocket badge（餘額） */
+.badge{background:var(--badge);color:#d9f5f8;border:1px solid var(--border);padding:2px 8px;border-radius:999px;font-weight:800}
 
-.payer{min-width:60px}
-.payer.active{background:var(--chip-active); border-color:var(--primary)}
-
-/* ───────────────────────────── Recent list */
-.list{display:grid; gap:8px}
-.row.recent{display:grid; grid-template-columns: 100px 1fr auto; gap:8px; align-items:center; padding:8px; background:var(--chip-bg); border:1px solid var(--border); border-radius:12px}
+/* ───────── Recent list */
+.list{display:grid;gap:8px}
+.row.recent{display:grid;grid-template-columns: 95px 1fr auto;gap:8px;align-items:center;padding:10px;background:var(--chip-bg);border:1px solid var(--border);border-radius:12px}
 .r-date{color:var(--muted)}
-.r-amt{font-weight:700}
-.r-amt.pos{color:#71e6a0}
-.r-amt.neg{color:#f39b9b}
+.r-amt{font-weight:800}
+.r-amt.pos{color:var(--pos)}
+.r-amt.neg{color:var(--neg)}
 
-/* ───────────────────────────── Footer */
-.foot{padding:14px 12px; color:var(--muted); text-align:center}
+/* ───────── Footer */
+.foot{padding:14px 12px;color:var(--muted);text-align:center}
 
-/* ───────────────────────────── Mobile */
+/* ───────── Mobile */
 @media (max-width:480px){
   .topbar{flex-wrap:wrap}
-  .tabs{top:auto; position:static}
-  .chip-grid{grid-template-columns:repeat(2,1fr)}
+  .tabs{top:auto;position:static}
+  .items{grid-template-columns:repeat(2,1fr)}
   .row.recent{grid-template-columns: 84px 1fr auto}
 }
