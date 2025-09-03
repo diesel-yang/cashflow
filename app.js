@@ -287,11 +287,7 @@ function renderGroups(){
   }
   row.appendChild(frag);
 }
-5) 小豬口袋 icon（SVG）仍可用，並統一樣式
-若你已把 <symbol id="pig-icon">…</symbol> 放進 index.html，渲染口袋時用 <svg><use href="#pig-icon"/></svg>，並讓外觀跟上面一樣：
 
-js
-複製程式碼
 function renderPockets(){
   const row = document.getElementById('pockets-row');
   row.innerHTML = '';
@@ -322,17 +318,7 @@ function renderPockets(){
   });
   row.appendChild(frag);
 }
-6) 分類渲染「很慢」的成因 & 解法
-常見兩個原因：
 
-原因 A： 每次點任何按鈕都「同時重建 group + items + 事件監聽」。
-處理： 僅在 state.group 變更時才呼叫 renderItems()；其餘只更新高亮。上面範例已避開這點。
-
-原因 B： catalog 資料量大、每次都從 RTDB 抓取。
-處理： ensureCatalog() 只拉一次，記在記憶體（如上），必要時再加 localStorage 快取：
-
-js
-複製程式碼
 async function ensureCatalog(){
   if(catalog) return;
   const cached = localStorage.getItem('cf_catalog_v2');
@@ -345,24 +331,14 @@ async function ensureCatalog(){
   }
   catalogIndex = buildCatalogIndex(catalog);
 }
-之後若你更新了 catalog，記得把 key 改成 cf_catalog_v3 之類（你前面提到的「cache key」就是這個）。
 
-其他：normalizeKind（保留）
-你要保留這段是對的（舊資料對應新命名）——請放在 app.js 靠上位置：
-
-js
-複製程式碼
 const normalizeKind = k => {
   if(!k) return '';
   if(k === '餐廳收入') return '營業收入';
   if(k === '其他')     return '其他支出';
   return k;
 };
-最後給你一個初始化順序（app.js 主要流程）
-確保畫面載入順序正確、避免「icon 沒出現」：
 
-js
-複製程式碼
 (async function init(){
   bindConnectButton();      // 連線按鈕
   bindIOScopeChips();       // 支出/收入 + 餐廳/個人
