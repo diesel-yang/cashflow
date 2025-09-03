@@ -29,14 +29,17 @@
     <!-- 放在 <section id="view-book"> 裡、原本那塊整段替換 -->
 <section class="card">
 
-  <!-- 列 1：支出/收入 + 日期 -->
-  <div class="row between wrap gap8">
-    <div class="chip-group" id="chip-io">
-      <button class="chip pill lg" data-io="expense">支出</button>
-      <button class="chip pill lg" data-io="income">收入</button>
-    </div>
-    <input id="rec-date" type="date" class="elevated" />
+<!-- 列 1：支出/收入 + 金額 + 日期 -->
+<div class="row stack">
+  <div class="chip-group" id="chip-io">
+    <button class="chip pill lg" data-io="expense">支出</button>
+    <button class="chip pill lg" data-io="income">收入</button>
   </div>
+
+  <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" class="amt">
+
+  <input id="rec-date" type="date" class="elevated">
+</div>
 
   <!-- 列 2：付費口袋 + 付款人（人形＋文字） -->
   <div class="row wrap gap10 mt8">
@@ -63,9 +66,8 @@
     <div class="chip-group" id="chip-who"><!-- 由 JS 注入 --></div>
   </div>
 
-  <!-- 列 3：金額 + 用途（無預設） -->
+  <!-- 列 3：用途（無預設） -->
   <div class="row wrap gap10 mt8">
-    <input id="rec-amt" type="number" inputmode="decimal" placeholder="金額" class="amt">
     <div class="chip-group" id="chip-scope">
       <button class="chip pill" data-scope="restaurant">餐廳</button>
       <button class="chip pill" data-scope="personal">個人</button>
