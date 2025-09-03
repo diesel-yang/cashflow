@@ -22,13 +22,9 @@
   --neg:#ff9aa0;         /* 負數（支出） */
 }
 
-*{box-sizing:border-box}
-html,body{
-  margin:0; padding:0;
-  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;
-  background:var(--bg); color:var(--text);
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-}
+html,body { font-size: 18px; }
+.chip, .btn, .input, .amt { font-size: 18px; }
+.section-head, .subhead { font-size: 16px; }
 
 img{max-width:100%; display:block}
 
