@@ -1,175 +1,188 @@
 /* ==========================================================================
-   極速記帳 - 深色高對比主題（mobile-first）
+   極速記帳 - 深色高對比（mobile-first）
+   本版強化：
+   - 未連線紅色按鈕
+   - 支出/收入/用途 chip 高亮（粗體＋外框）
+   - 第一區塊字級一致置中（金額/日期）
+   - 口袋置中，小豬 2 倍大
+   - 最近 20 筆列表白字
    ========================================================================== */
 
-/* 主題變數 */
 :root{
-  --bg:#0a0f11; --card:#10191c; --text:#f6fbff; --muted:#a9bec6;
-  --primary:#12b4c4; --primary-weak:#0f8f9b; --border:#223337;
-  --chip-bg:#0f1719; --chip-active:#10323a; --accent:#13c1d3;
-  --pos:#75e5aa; --neg:#ff9aa0;
-  --radius:14px; --gap:12px; --tap:52px; --fs:17px;
+  --bg:#0a0f11;
+  --card:#10191c;
+  --text:#f3fbfd;
+  --muted:#a8c0c7;
+  --primary:#12b4c4;
+  --primary-weak:#0f8f9b;
+  --accent:#12b4c4;
+  --border:#203033;
+  --chip-bg:#0f1719;
+  --chip-active:#0f2f35;
+  --badge:#0d2226;
+  --pos:#76e3a8;
+  --neg:#ff9aa0;
 }
+
 *{box-sizing:border-box}
 html,body{
-  margin:0; background:var(--bg); color:var(--text);
-  font:600 var(--fs)/1.35 -apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC",Segoe UI,Roboto,Arial;
+  margin:0;padding:0;
+  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;
+  background:var(--bg); color:var(--text);
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-img{max-width:100%;display:block}
+img{max-width:100%; display:block}
 
-/* Topbar */
-.topbar{display:flex;align-items:center;gap:12px;padding:10px 12px;position:sticky;top:0;background:var(--bg);z-index:3}
-.brand{display:flex;align-items:center;gap:8px}
-.brand .logo{font-size:24px}
-.brand-name{font-weight:800}
-.brand-sub{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.mt8{margin-top:8px}.mt12{margin-top:12px}
 .space{flex:1}
 
-/* Tabs */
-.tabs{display:flex;gap:10px;padding:8px 12px;position:sticky;top:56px;background:var(--bg);z-index:2}
-.tab{border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
-.tab.active{
-  border-color:var(--primary);background:var(--chip-active);
-  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 10px 22px rgba(0,0,0,.36),0 0 0 2px color-mix(in srgb,var(--primary) 28%, transparent);
+/* ───────── Topbar */
+.topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px; position:sticky; top:0; z-index:3; background:var(--bg);
 }
+.brand{display:flex;align-items:center;gap:8px}
+.brand .logo{font-size:24px}
+.brand-name{font-weight:700}
+.brand-sub{font-size:12px;color:var(--muted)}
 
-/* Elevated 通用（日期選擇器同款立體） */
-.elevated{
-  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
-  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 8px 18px rgba(0,0,0,.35);
-  transition:transform .06s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+.input{
+  width:100%;
+  background:var(--chip-bg);
+  color:var(--text);
+  border:1px solid var(--border);
   border-radius:12px;
+  padding:12px 14px;
 }
-.pressable:hover{transform:translateY(-1px)}
-.pressable:active{transform:translateY(0);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 4px 10px rgba(0,0,0,.35)}
+#space-code{ text-align:center; }
 
-.btn-elevated{composes:elevated;padding:12px 18px;border-radius:14px;font-weight:800;letter-spacing:.02em}
-.btn-elevated.primary{
-  background:linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #000) 0%, var(--primary) 100%);
-  color:#001114;border-color:color-mix(in srgb, var(--primary) 60%, var(--border));
-  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 10px 24px rgba(0,0,0,.45),0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent)
+/* 按鈕 */
+.btn{
+  background:var(--primary);
+  color:#001114;
+  border:none;border-radius:12px;padding:12px 14px;
+  font-weight:800; cursor:pointer;
 }
-.btn-elevated.ghost{background:var(--chip-bg);color:var(--text)}
+.btn.on{background:var(--primary-weak)}
+.btn.danger{ background:#dc3545 !important; color:#fff; }
+.btn.success{ background:#2ac3a2 !important; color:#001114; }
 
-/* 主容器與卡片 */
-main{padding:12px;display:grid;gap:16px}
-.page{display:none}.page.show{display:block}
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:12px 12px 14px;display:grid;gap:12px;box-shadow:0 0 0 1px rgba(255,255,255,.03) inset}
-.section-head{font-size:15px;font-weight:800}
-.subhead{font-size:14px;font-weight:700;color:var(--muted)}
+/* Tabs */
+.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:54px;z-index:2;background:var(--bg)}
+.tab{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
+  padding:9px 13px;border-radius:999px;cursor:pointer
+}
+.tab.active{background:var(--chip-active);border-color:var(--primary);font-weight:800}
+
+main{padding:8px 12px;display:grid;gap:12px}
+.page{display:none}
+.page.show{display:block}
+
+/* Cards */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:12px 12px 14px;display:grid;gap:12px;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset;
+  margin-top:8px;margin-bottom:8px;
+}
+.section-head{font-size:14px;font-weight:800;letter-spacing:.04em}
+.subhead{font-size:13px;font-weight:700;color:var(--muted)}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.row.between{justify-content:space-between}
-.card>*+*{margin-top:12px}
-.card{margin-bottom:16px}
-
-/* 輸入類 */
-.input,.amt{height:var(--tap);padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--chip-bg);color:var(--text)}
-.amt{min-width:150px;font-variant-numeric:tabular-nums}
-.date-wrap{display:flex;align-items:center;gap:8px}
+.pack{justify-content:space-between}
 
 /* Chips */
-.chip{min-height:var(--tap);border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:999px;padding:10px 14px;display:inline-flex;align-items:center;gap:10px;cursor:pointer}
-.chip.box{border-radius:var(--radius);width:100%;justify-content:flex-start}
-.chip.lg{font-size:18px}
-.chip.active{background:var(--chip-active);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.emoji{width:24px;height:24px;display:grid;place-items:center;font-size:20px}
+.chip{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
+  border-radius:12px;padding:10px 12px;min-height:48px;
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  transition:background .15s,border-color .15s,box-shadow .15s,transform .05s;
+}
+.chip.pill{border-radius:999px}
+.chip.lg{font-size:18px;justify-content:center}
+.chip.box{width:100%;justify-content:flex-start}
+.chip:hover{transform:translateY(-1px)}
+.chip.active{
+  background:var(--chip-active);
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
+  font-weight:900;
+}
+.emoji{width:22px;height:22px;display:inline-grid;place-items:center;font-size:20px;line-height:1}
 .label{flex:1}
 
-/* grid */
+/* Grids */
 .grid{display:grid;gap:10px}
 .grid-3{grid-template-columns:repeat(3,1fr)}
-.grid-2{grid-template-columns:repeat(2,1fr)}
-@media (max-width:560px){ .grid-3{grid-template-columns:repeat(2,1fr)} }
+.chip-grid{display:grid;gap:10px}
+.group-grid{grid-template-columns:repeat(2,1fr)}
+.items{grid-template-columns:repeat(3,1fr)}
+@media (min-width:520px){ .group-grid{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:480px){ .items{grid-template-columns:repeat(2,1fr)} }
 
-/* 用途在右：兩顆鈕等寬撐滿行寬 */
-.scope-head{display:flex;align-items:center;justify-content:space-between}
-#chip-scope.chip-group.wide{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;flex:1;margin-left:12px}
-#chip-scope .chip{composes:elevated pressable;width:100%;justify-content:center;border-radius:12px}
+/* Inputs（第一區塊字級與置中） */
+.amt{
+  min-width:140px;background:var(--chip-bg);color:var(--text);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  text-align:center;font-weight:900;font-size:20px;
+  font-variant-numeric:tabular-nums;
+}
+.elevated{
+  border-radius:12px;border:1px solid var(--border);
+  background:var(--chip-bg);color:var(--text);padding:12px 14px;
+}
+input::placeholder{color:var(--muted)}
+.date-wrap{display:flex;align-items:center;gap:6px}
+.date-wrap input[type="date"]{ text-align:center; font-weight:800; font-size:18px; min-width:160px; }
 
-/* 付款人與口袋 */
-#payers-row .chip{justify-content:center}
-#payers-row .chip.active{border-color:var(--accent);background:var(--chip-active)}
+/* 口袋（置中，小豬 2x） */
+#pockets-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.pocket{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:10px;
+  border:1px solid var(--border);background:var(--card);
+  border-radius:16px;padding:12px;
+  cursor:pointer;transition:transform .05s,box-shadow .15s,border-color .15s;
+  min-height:150px;
+}
+.pocket:hover{ transform:translateY(-1px) }
+.pocket.active{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pocket .pig{ width:88px; height:88px; }
+.pocket .name{ font-size:15px; color:var(--muted) }
+.pocket .amt{ font-size:22px; font-weight:900; color:var(--text) }
 
-#pockets-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.pocket{display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--card);border-radius:var(--radius);padding:10px 12px;cursor:pointer}
-.pocket.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%, transparent)}
-.pocket .pig{width:44px;height:44px;color:#8fb0bb}
-.pocket .meta{display:flex;flex-direction:column;line-height:1.1}
-.pocket .name{font-size:15px;color:var(--muted)}
-.pocket .amt{font-size:18px;font-weight:800}
+/* 付款人按鈕（置中＋icon 統一） */
+#payers-row .chip{ justify-content:center }
+#payers-row .emoji{ width:22px; height:22px; font-size:20px }
 
 /* 最近 20 筆 */
 .list{display:grid;gap:8px}
-.list .row{display:grid;grid-template-columns:88px 1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--chip-bg);color:#fff}
-.r-amt{font-weight:800}.r-amt.pos{color:var(--pos)}.r-amt.neg{color:var(--neg)}
+.list .row{
+  display:grid; grid-template-columns: 95px 1fr auto;
+  gap:8px; align-items:center;
+  padding:10px; background:var(--chip-bg);
+  border:1px solid var(--border); border-radius:12px;
+  color:var(--text);
+}
+.list .r-date{color:var(--muted)}
+.list .r-amt{font-weight:900}
+.list .r-amt.pos{color:var(--pos)}
+.list .r-amt.neg{color:var(--neg)}
 
-/* Footer */
-.foot{padding:14px 12px;color:var(--muted);text-align:center}
-
-/* ============ 連線按鈕：未連紅色、已連藍綠 ============ */
-.btn-elevated.danger{
-  border:1px solid #5a1f27;
-  background: linear-gradient(180deg, #7a2330 0%, #b33848 100%);
-  color:#fff;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.07) inset,
-    0 10px 24px rgba(0,0,0,.45),
-    0 0 0 2px rgba(179,56,72,.18);
+/* Mobile */
+@media (max-width:480px){
+  .topbar{flex-wrap:wrap}
+  .tabs{top:auto;position:static}
+  .list .row{grid-template-columns: 84px 1fr auto}
 }
 
-/* ============ 區塊齊寬：與下方「三口袋」完全對齊 ============ */
-/* 頂部 ①「支出/收入｜金額｜日期」用三等分，等寬對齊 pockets  */
-.top-eqgrid{
-  display:grid; gap:12px;
-  grid-template-columns: repeat(3, 1fr);
+/* Focus 可用性 */
+:where(button,.chip,.pocket,input):focus-visible{
+  outline:2px solid var(--primary);
+  outline-offset:2px;
 }
-#chip-io.two{
-  display:grid; gap:10px;         /* 兩顆堆疊更好點 */
-  grid-auto-rows: minmax(var(--tap), auto);
-}
-#rec-amt.center{ text-align:center; font-size:22px; font-weight:800; letter-spacing:.02em }
-#rec-date{ text-align:center }
-
-/* 日期外層讓高度與其他元件一致 */
-.date-wrap{ height:var(--tap) }
-.date-wrap > .elevated{ width:100%; height:100% }
-
-/* ============ Room（共享代號）置中文字 ============ */
-#room{ text-align:center }
-
-/* ============ 「分類大項/項目/用途」— 大一號 + 更大字距 ============ */
-#chip-scope .chip,
-#group-grid .chip.box,
-#items-grid .chip.box{
-  min-height:56px;
-  font-size:18px;
-  letter-spacing:.4px;
-}
-#group-grid .emoji, #items-grid .emoji{ font-size:22px; }
-
-/* 點擊高亮時，同步讓文字更大更粗（視覺更明顯） */
-.chip.active .label{ font-weight:800; font-size:19px; }
-
-/* ============ 新增項目／備註＋送出：齊三欄寬、與口袋對齊 ============ */
-.row.cols-3{
-  display:grid; gap:12px;
-  grid-template-columns: repeat(3, 1fr);
-  align-items:stretch;
-}
-.span-2{ grid-column: span 2; }
-.btn-elevated, .chip{ min-height: var(--tap) }
-
-/* 送出與新增：同色字，字距放大；四顆高度一致（已由 min-height 控） */
-.btn-elevated.primary,
-.btn-elevated.ghost{ color:#f6fbff; letter-spacing:.04em }
-
-/* ============ 清楚的區塊上下距（避免緊貼） ============ */
-.card > * + *{ margin-top:12px }
-.card{ margin-bottom:16px }
-
-/* ============ 用途兩顆鈕等寬撐滿（維持原本樣式） ============ */
-#chip-scope.chip-group.wide{
-  display:grid; grid-template-columns:repeat(2,1fr); gap:10px; flex:1; margin-left:12px;
-}
-#chip-scope .chip{ width:100%; justify-content:center; border-radius:12px }
