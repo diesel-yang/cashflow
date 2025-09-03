@@ -192,10 +192,48 @@ function buildCatalogIndex(raw){
     }
   });
   state.catalogIndex = byScope;
+}function buildCatalogIndex(raw){
+  const cat = raw ?? state.catalog ?? {};
+  // 允許三種來源：扁平陣列 / categories.restaurant / categories.personal
+  const flat = Array.isArray(cat) ? cat
+    : [].concat(cat.categories?.restaurant || [],
+                cat.categories?.personal   || [],
+                cat.categories || []);
+
+  // 舊命名 → 新命名
+  const normalizeKind = (k) => {
+    if (!k) return '';
+    if (k === '餐廳收入') return '營業收入';
+    if (k === '其他')   return '其他支出';
+    return k;
+  };
+
+  const byScope = { restaurant:[], personal:[] };
+  const REST_GROUPS = new Set(['營業收入','銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務']);
+
+  flat.forEach(x=>{
+    const item = {
+      id   : x.id    || x.label,
+      label: x.label || x.id,
+      kind : normalizeKind(x.kind || '')
+    };
+    if(REST_GROUPS.has(item.kind)) byScope.restaurant.push(item);
+    else                           byScope.personal.push(item);
+  });
+
+  state.catalogIndex = byScope;
+
+  // Console 診斷
+  console.log('[catalogIndex]',
+    'restaurant=', byScope.restaurant.length,
+    'personal=',   byScope.personal.length
+  );
 }
 function categoriesFor(io, scope, group){
-  const pool = (scope==='restaurant') ? (state.catalogIndex?.restaurant||[])
-                                       : (state.catalogIndex?.personal  ||[]);
+  const pool = (scope==='restaurant')
+    ? (state.catalogIndex?.restaurant || [])
+    : (state.catalogIndex?.personal   || []);
+
   return pool.filter(c => c.kind === group);
 }
 
@@ -312,18 +350,33 @@ async function connectSpace(){
 async function ensureCatalog(){
   const base = ref(db, `rooms/${state.space}/catalog`);
   const snap = await get(base);
-  if(snap.exists()){ state.catalog = snap.val(); }
-  else { state.catalog = { categories:{ restaurant:[], personal:[] } }; await set(base, state.catalog); }
+  if(snap.exists()){
+    state.catalog = snap.val();
+  }else{
+    // 如果 DB 沒 catalog，就放空骨架（可直接在 UI 新增）
+    state.catalog = { categories:{ restaurant:[], personal:[] } };
+    await set(base, state.catalog);
+  }
 
   buildCatalogIndex(state.catalog);
-  renderPockets(); renderPayers();
 
-  // 預設：支出 + 餐廳
-  state.io='expense'; state.scope='restaurant';
+  // 預設 UI 狀態
+  renderPockets();
+  renderPayers();
+  state.io = 'expense';
+  state.scope = 'restaurant';
   $('#chip-io [data-io="expense"]').classList.add('active');
   $('#chip-scope [data-scope="restaurant"]').classList.add('active');
+  renderGroups();
+  renderItems();
 
-  renderGroups(); renderItems();
+  // 若索引是 0，協助提示
+  const rCount = state.catalogIndex?.restaurant?.length || 0;
+  const pCount = state.catalogIndex?.personal?.length || 0;
+  if(rCount + pCount === 0){
+    console.warn('[catalog] 目前沒有任何分類項目。請到 Realtime DB 匯入 catalog_full.json → /rooms/<space>/catalog');
+    $('#items-grid').innerHTML = `<div class="muted">（尚未匯入分類。請到 Firebase 匯入 catalog）</div>`;
+  }
 }
 
 // Auth
