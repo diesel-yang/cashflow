@@ -193,3 +193,7 @@ input::placeholder{color:var(--muted)}
   outline:2px solid var(--primary);
   outline-offset:2px;
 }
+
+html,body { font-size: 18px; }
+.chip, .btn, .input, .amt { font-size: 18px; }
+.section-head, .subhead { font-size: 16px; }
