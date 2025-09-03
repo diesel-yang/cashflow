@@ -171,27 +171,6 @@ function groupsFor(io, scope){
   }
 }
 
-function buildCatalogIndex(raw){
-  const cat = raw || state.catalog || {};
-  const flat = Array.isArray(cat) ? cat
-    : [].concat(cat.categories?.restaurant || [],
-                cat.categories?.personal   || [],
-                cat.categories || []);
-  const norm = k => (k==='餐廳收入'?'營業收入': (k==='其他'?'其他支出': k));
-  const byScope = { restaurant:[], personal:[] };
-  flat.forEach(x=>{
-    const item = {
-      id:   x.id   || x.label,
-      label:x.label|| x.id,
-      kind: norm(x.kind||'')
-    };
-    if(['營業收入','銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務'].includes(item.kind)){
-      byScope.restaurant.push(item);
-    }else{
-      byScope.personal.push(item);
-    }
-  });
-  state.catalogIndex = byScope;
 }function buildCatalogIndex(raw){
   const cat = raw ?? state.catalog ?? {};
   // 允許三種來源：扁平陣列 / categories.restaurant / categories.personal
