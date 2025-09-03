@@ -136,12 +136,13 @@ function watchRecent(){
   if (state.space) doConnect();
 })();
 
-// ── 口袋小豬（餘額＋名稱）與餘額即時監看 ─────────────
+// 口袋定義（改用 PNG icon）
 const POCKETS = [
-  { key:'restaurant', name:'餐廳' },
-  { key:'jack',       name:'Jack' },
-  { key:'wal',        name:'Wal'  },
+  { key:'restaurant', name:'餐廳', icon:'icons/pocket-restaurant-128.png' },
+  { key:'jack',       name:'Jack', icon:'icons/pocket-jack-128.png' },
+  { key:'wal',        name:'Wal',  icon:'icons/pocket-wal-128.png'  },
 ];
+
 
 // 你可改為 <img class="pig" src="/icons/pig-outline.svg"> 使用自訂圖檔
 const PIG_SVG = `
@@ -149,16 +150,22 @@ const PIG_SVG = `
   <path fill="currentColor" d="M50 22c2 0 4 2 6 9v7c0 1-1 2-2 2h-2c-3 9-13 15-26 15C12 55 5 49 5 39c0-8 5-14 12-17l2-6c0-1 1-2 2-2h5c1 0 2 1 2 2l-1 3h10c3 0 6 1 8 3h5zM44 34a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
 </svg>`;
 
+// 產生口袋小豬（使用 <img>）
 function renderPockets(){
-  const host = byId('pockets-row'); if(!host) return;
+  const host = document.getElementById('pockets-row');
+  if(!host) return;
+
   host.innerHTML = POCKETS.map(p=>`
     <button class="pocket" data-pocket="${p.key}" aria-pressed="${state.pocket===p.key}">
-      <span class="amt" id="amt-${p.key}">0</span>
-      ${PIG_SVG}
-      <span class="name">${p.name}</span>
+      <img class="pig" src="${p.icon}" alt="${p.name}">
+      <div class="meta">
+        <div class="name">${p.name}</div>
+        <div class="amt" id="amt-${p.key}">0</div>
+      </div>
     </button>
   `).join('');
-  if(!state.pocket) state.pocket='restaurant';
+
+  if(!state.pocket) state.pocket = 'restaurant';
   setActivePocket(state.pocket);
 
   host.onclick = (e)=>{
@@ -168,22 +175,22 @@ function renderPockets(){
   };
 }
 
+// 切換高亮
 function setActivePocket(key){
   state.pocket = key;
-  $$('#pockets-row .pocket').forEach(el=>{
+  document.querySelectorAll('#pockets-row .pocket').forEach(el=>{
     const on = el.dataset.pocket===key;
     el.classList.toggle('active', on);
     el.setAttribute('aria-pressed', on?'true':'false');
   });
 }
-
+// 更新口袋金額（供 watchBalances 呼叫）
 function updatePocketAmounts(bal){
   for(const p of POCKETS){
-    const el = byId(`amt-${p.key}`);
+    const el = document.getElementById(`amt-${p.key}`);
     if(el) el.textContent = (Number(bal[p.key])||0).toLocaleString('zh-TW');
   }
 }
-
 function sumBalances(records){
   const bal = { restaurant:0, jack:0, wal:0 };
   for(const r of records){
