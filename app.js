@@ -1,4 +1,4 @@
-// app.js v3.9 — 事件完整綁定 / 即時口袋餘額 / 新增項目寫回 DB / 個人收入三大類 / kind 正規化
+// app.js v3.9.1 — 互動全面修正：連線/高亮/入口置中/口袋 2x/即時餘額/新增項目寫回
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -20,37 +20,36 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const db   = getDatabase(app);
 
-/* ───────────────── DOM 快取 ───────────────── */
+/* ───────────────── DOM utils ───────────────── */
 const $  = (s, el=document)=>el.querySelector(s);
 const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
 const byId = id=>document.getElementById(id);
 const money = n => (Number(n)||0).toLocaleString('zh-TW');
 
-const btnConnect = byId('btn-connect');
-const recentList = byId('recent-list');
-
-/* ───────────────── 狀態 ───────────────── */
+/* ───────────────── State ───────────────── */
 const state = {
   space: localStorage.getItem('CF_SPACE') || "",
-  io: "expense",           // expense | income
-  scope: "restaurant",     // restaurant | personal
-  group: "", item: "",
-  payer: "",               // J | W | JW（支出）; Jack | Wal（收入）
-  pocket: "",              // restaurant | jack | wal
+  io: "expense",
+  scope: "restaurant",
+  group: "",
+  item: "",
+  payer: "",
+  pocket: "",
   catalog: null, catalogIndex: null,
 };
 
-/* ───────────────── 分類群組 ───────────────── */
+/* ───────────────── Groups ───────────────── */
 const REST_GROUPS = ['營業收入','銷貨成本','人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
 const PERS_INCOME_GROUPS  = ['薪資收入','投資獲利','其他收入'];
 const PERS_EXPENSE_GROUPS = ['飲食','治裝','住房','交通','教育','娛樂','稅捐','醫療','其他支出'];
+
 function groupsFor(io, scope){
   if(scope==='restaurant')
     return (io==='income') ? ['營業收入'] : REST_GROUPS.filter(g=>g!=='營業收入');
   return (io==='income') ? PERS_INCOME_GROUPS : PERS_EXPENSE_GROUPS;
 }
 
-/* ───────────────── 圖示 ───────────────── */
+/* ───────────────── Icons ───────────────── */
 const GROUP_ICON_MAP = {
   '營業收入':'💰','銷貨成本':'📦','人事':'🧑‍🍳','水電/租金/網路':'🏠',
   '行銷':'📣','物流/運輸':'🚚','行政/稅務':'🧾',
@@ -59,7 +58,7 @@ const GROUP_ICON_MAP = {
   '娛樂':'🎬','稅捐':'💸','醫療':'🩺','其他支出':'🧩'
 };
 
-/* ───────────────── 舊 kind → 新命名 ───────────────── */
+/* ───────────────── kind 正規化（相容舊資料） ───────────────── */
 function normalizeKind(k){
   if(!k) return '';
   if(k==='餐廳收入') return '營業收入';
@@ -86,7 +85,7 @@ function buildCatalogIndex(raw){
   const flat = Array.isArray(raw)? raw
     : [].concat(raw?.categories?.restaurant||[], raw?.categories?.personal||[], raw?.categories||[]);
   const by={restaurant:[], personal:[]};
-  flat.forEach(x=>{
+  (flat||[]).forEach(x=>{
     const item = { id:x.id||x.label, label:x.label||x.id, kind:normalizeKind(x.kind), icon:x.icon||'' };
     if(REST_GROUPS.includes(item.kind)) by.restaurant.push(item); else by.personal.push(item);
   });
@@ -99,6 +98,7 @@ function categoriesFor(scope, group){
 
 /* ───────────────── 最近 20 筆 ───────────────── */
 function watchRecent(){
+  const recentList = byId('recent-list'); if(!recentList) return;
   const q = query(ref(db, `rooms/${state.space}/records`), orderByChild('ts'), limitToLast(20));
   onValue(q, snap=>{
     const rows=[]; snap.forEach(ch=>rows.push(ch.val())); rows.sort((a,b)=>b.ts-a.ts);
@@ -114,12 +114,13 @@ function watchRecent(){
   });
 }
 
-/* ───────────────── 口袋（小豬） ───────────────── */
+/* ───────────────── 口袋（小豬 2x） ───────────────── */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
+
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
-    <button class="pocket" data-pocket="${p.key}">
+    <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
       <svg class="pig" width="88" height="88" viewBox="0 0 167 139" aria-hidden="true">
         <use href="#pig-icon"></use>
       </svg>
@@ -138,9 +139,13 @@ function renderPockets(){
 function setActivePocket(key){
   state.pocket=key;
   $$('#pockets-row .pocket').forEach(el=>{
-    el.classList.toggle('active',el.dataset.pocket===key);
+    const on = el.dataset.pocket===key;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-pressed', on?'true':'false');
   });
 }
+
+/* 口袋金額顏色（>0 綠 / <0 紅 / =0 白） */
 function updatePocketAmounts(bal){
   for(const p of POCKETS){
     const el=byId(`amt-${p.key}`); if(!el) continue;
@@ -167,12 +172,12 @@ function watchBalances(){
   });
 }
 
-/* ───────────────── 付款人 / 收款人（含 icon） ───────────────── */
+/* ───────────────── 付款人 / 收款人（emoji 一致） ───────────────── */
 function renderPayers(){
   const row=byId('payers-row'); if(!row) return;
   const data = (state.io==='income')
-    ? [{key:'Jack',label:'Jack', icon:'🧑'}, {key:'Wal',label:'Wal', icon:'🧑'}]
-    : [{key:'J',label:'J',icon:'🧑'}, {key:'W',label:'W',icon:'🧑'}, {key:'JW',label:'JW',icon:'👥'}];
+    ? [{key:'Jack',label:'Jack', icon:'👤'}, {key:'Wal',label:'Wal', icon:'👤'}]
+    : [{key:'J',label:'J',icon:'👤'}, {key:'W',label:'W',icon:'👤'}, {key:'JW',label:'JW',icon:'👥'}];
   row.innerHTML=data.map(x=>`<button class="chip pill lg" data-payer="${x.key}">
     <span class="emoji">${x.icon}</span><span class="label">${x.label}</span></button>`).join('');
   row.onclick=e=>{
@@ -245,7 +250,7 @@ byId('btn-submit')?.addEventListener('click',async()=>{
   byId('rec-amt').value=''; byId('rec-note').value='';
 });
 
-/* ───────────────── 分頁、支出/收入、用途 事件綁定 ───────────────── */
+/* ───────────────── 分頁/收支/用途 綁定 ───────────────── */
 function bindTabs(){
   $$('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
@@ -280,35 +285,45 @@ function bindScopeChips(){
 }
 
 /* ───────────────── 連線 ───────────────── */
-btnConnect?.addEventListener('click',async()=>{
+const btnConnect = byId('btn-connect');
+function doConnect(){
   const input = byId('space-code');
   const code = (input?.value||'').trim();
   if(!code){ alert('請輸入共享代號'); return; }
   state.space = code;
-  await ensureRoom();
-  await ensureCatalog();
-  renderPockets(); renderPayers(); watchRecent(); watchBalances();
-  btnConnect.textContent='連線中'; // 依你的描述：連線時顯示「連線中」
-  btnConnect.classList.add('success');
-  btnConnect.classList.remove('danger');
-  localStorage.setItem('CF_SPACE',state.space);
+  ensureRoom()
+    .then(ensureCatalog)
+    .then(()=>{
+      renderPockets(); renderPayers(); watchRecent(); watchBalances();
+      btnConnect.textContent='連線中';
+      btnConnect.classList.add('success');
+      btnConnect.classList.remove('danger');
+      localStorage.setItem('CF_SPACE',state.space);
+    })
+    .catch(err=>{
+      console.error(err);
+      alert('連線失敗，請稍後再試');
+    });
+}
+btnConnect?.addEventListener('click', doConnect);
+/* Enter 也能連線 */
+byId('space-code')?.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') doConnect();
 });
 
-/* ───────────────── 開機 ───────────────── */
+/* ───────────────── Boot ───────────────── */
 (function boot(){
-  // 未連線：按鈕維持紅色；有舊 space 自動連線
+  // 初始紅色按鈕（未連線）
   if(!state.space){
     btnConnect?.classList.add('danger');
   }else{
-    byId('space-code') && (byId('space-code').value = state.space);
+    const input = byId('space-code'); if(input) input.value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
       renderPockets(); renderPayers(); watchRecent(); watchBalances();
       btnConnect.textContent='連線中';
       btnConnect.classList.add('success'); btnConnect.classList.remove('danger');
     });
   }
-  // 初始繪製與綁定
   renderPockets(); renderPayers(); renderGroups(); renderItems();
   bindTabs(); bindIOChips(); bindScopeChips();
-  // 初始高亮（無預設 → 都不選；如果要預選，可在此加 active）
 })();
