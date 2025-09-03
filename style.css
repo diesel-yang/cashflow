@@ -1,3 +1,10 @@
+/* ==========================================================================
+   極速記帳 - 深色高對比主題（mobile-first）
+   - 採用 CSS 變數方便全站調色
+   - 口袋採 PNG 圖示版本（與 app.js 最新版對應）
+   - 元件依區塊：Topbar/Tabs/Cards/Chips/Grids/Inputs/Pockets/Recent/Footer
+   ========================================================================== */
+
 /* ───────── Theme：高對比深色 */
 :root{
   --bg:#0a0f11;          /* 背景更深，突顯卡片 */
@@ -6,17 +13,205 @@
   --muted:#a8c0c7;       /* 次要文字 */
   --primary:#12b4c4;     /* 主色：青綠 */
   --primary-weak:#0f8f9b;
+  --accent:#12b4c4;      /* 高亮色，用於選取邊框/陰影 */
   --border:#203033;      /* 邊框 */
   --chip-bg:#0f1719;     /* Chip 背景 */
   --chip-active:#0f2f35; /* Chip 選中背景 */
   --badge:#0d2226;       /* 口袋餘額牌 */
+  --pos:#76e3a8;         /* 正數（收入） */
+  --neg:#ff9aa0;         /* 負數（支出） */
+}
+
+*{box-sizing:border-box}
+html,body{
+  margin:0; padding:0;
+  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;
+  background:var(--bg); color:var(--text);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+
+img{max-width:100%; display:block}
+
+/* ───────── 通用小工具 */
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.mt4{margin-top:4px}.mt6{margin-top:6px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.flex{flex:1}
+.center{display:grid;place-items:center}
+.text-right{text-align:right}
+
+/* ───────── Topbar & Tabs */
+.topbar{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; position:sticky; top:0;
+  background:var(--bg); z-index:3;
+}
+.brand{display:flex; align-items:center; gap:8px}
+.brand .logo{font-size:24px}
+.brand-name{font-weight:700}
+.brand-sub{font-size:12px; color:var(--muted)}
+.space{flex:1}
+
+.input{
+  width:100%; background:var(--chip-bg); color:var(--text);
+  border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+}
+.btn{
+  background:var(--primary); color:#001114;
+  border:none; border-radius:12px; padding:12px 14px; font-weight:700; cursor:pointer;
+}
+.btn.on{background:var(--primary-weak)}
+.btn.danger{background:#dc5b6b; color:#fff}
+.btn.success{background:#2ac3a2; color:#001114}
+
+.tabs{
+  display:flex; gap:8px; padding:8px 12px;
+  position:sticky; top:54px; background:var(--bg); z-index:2;
+}
+.tab{
+  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
+  padding:9px 13px; border-radius:999px; cursor:pointer;
+}
+.tab.active{background:var(--chip-active); border-color:var(--primary)}
+
+main{padding:8px 12px; display:grid; gap:12px}
+.page{display:none}
+.page.show{display:block}
+
+/* ───────── Cards / Headings */
+.card{
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:12px 12px 14px; display:grid; gap:12px;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset;
+}
+.section-head{font-size:14px; font-weight:800; color:var(--text); letter-spacing:.04em}
+.subhead{font-size:13px; font-weight:700; color:var(--muted)}
+.row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.pack{justify-content:space-between}
+
+/* ───────── Chips（統一尺寸＋觸控區） */
+.chip{
+  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
+  border-radius:12px; padding:10px 12px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px; min-height:48px;
+  transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.chip.pill{border-radius:999px}
+.chip.lg{font-size:16px}
+.chip.box{width:100%; justify-content:flex-start}
+.chip.active{background:var(--chip-active); border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset}
+
+.emoji{width:22px; height:22px; display:inline-grid; place-items:center; font-size:20px; line-height:1}  /* 統一 icon 尺寸 */
+.label{flex:1}
+
+/* ───────── Grids */
+.grid{display:grid; gap:10px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+
+.chip-grid{display:grid; gap:10px}
+.group-grid{grid-template-columns:repeat(2,1fr)}
+@media (min-width:520px){ .group-grid{grid-template-columns:repeat(3,1fr)} }
+.items{grid-template-columns:repeat(3,1fr)}
+
+/* ───────── Inputs */
+.amt{
+  min-width:140px; background:var(--chip-bg); color:var(--text);
+  border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+  font-variant-numeric:tabular-nums;
+}
+.elevated{
+  border-radius:12px; border:1px solid var(--border); background:var(--chip-bg); color:var(--text); padding:12px 14px;
+}
+input::placeholder{color:var(--muted)}
+.date-wrap{display:flex; align-items:center; gap:6px}
+.i-cal{filter:brightness(1.2)}
+
+/* ───────── Pocket 小豬（使用 PNG 圖示；對應 app.js 的 renderPockets） */
+#pockets-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+.pocket{
+  display:flex; align-items:center; gap:10px;
+  border:1px solid var(--border);
+  background:var(--card);
+  border-radius:14px; padding:10px 12px;
+  cursor:pointer;
+  transition:transform .05s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.pocket:hover{ transform:translateY(-1px) }
+.pocket.active{
+  border-color:var(--accent);
+  /* 若 color-mix 不支援，仍保留高亮邊框效果 */
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pocket .pig{
+  width:44px; height:44px; flex:0 0 44px;
+  object-fit:contain;
+  image-rendering:-webkit-optimize-contrast;
+}
+.pocket .meta{ display:flex; flex-direction:column; line-height:1.15 }
+.pocket .name{ font-size:14px; color:var(--muted) }
+.pocket .amt{ font-size:18px; font-weight:700; color:var(--text) }
+
+@media (max-width:380px){
+  .pocket .pig{ width:40px; height:40px }
+  .pocket .amt{ font-size:17px }
+}
+
+/* ───────── Recent list（最近 20 筆） */
+.list{display:grid; gap:8px}
+.list .row{
+  display:grid;
+  grid-template-columns: 95px 1fr auto;
+  gap:8px; align-items:center;
+  padding:10px;
+  background:var(--chip-bg);
+  border:1px solid var(--border);
+  border-radius:12px;
+}
+.list .r-date{color:var(--muted)}
+.list .r-amt{font-weight:800}
+.list .r-amt.pos{color:var(--pos)}
+.list .r-amt.neg{color:var(--neg)}
+
+/* ───────── Footer */
+.foot{padding:14px 12px; color:var(--muted); text-align:center}
+
+/* ───────── Mobile 調整 */
+@media (max-width:480px){
+  .topbar{flex-wrap:wrap}
+  .tabs{top:auto; position:static}
+  .items{grid-template-columns:repeat(2,1fr)}
+  .list .row{grid-template-columns:84px 1fr auto}
+}
+
+/* ───────── 輔助可用性（focus 顯示） */
+:where(button, .chip, .pocket, input).focus-visible, 
+:where(button, .chip, .pocket, input):focus-visible{
+  outline:2px solid var(--primary);
+  outline-offset:2px;
+}
+/*  Theme */
+:root{
+  --bg:#0a0f11;          /*  */
+  --card:#10191c;        /*  */
+  --text:#f3fbfd;        /*  */
+  --muted:#a8c0c7;       /*  */
+  --primary:#12b4c4;     /*  */
+  --primary-weak:#0f8f9b;
+  --border:#203033;      /*  */
+  --chip-bg:#0f1719;     /* Chip  */
+  --chip-active:#0f2f35; /* Chip  */
+  --badge:#0d2226;       /*  */
   --pos:#76e3a8;
   --neg:#ff9aa0;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;background:var(--bg);color:var(--text)}
 
-/* ───────── Topbar & Tabs */
+/*  Topbar & Tabs */
 .topbar{display:flex;align-items:center;gap:12px;padding:10px 12px;position:sticky;top:0;background:var(--bg);z-index:3}
 .brand{display:flex;align-items:center;gap:8px}
 .brand .logo{font-size:24px}
@@ -36,7 +231,7 @@ main{padding:8px 12px;display:grid;gap:12px}
 .page{display:none}
 .page.show{display:block}
 
-/* ───────── Cards / Headings */
+/*  Cards / Headings */
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 12px 14px;display:grid;gap:12px}
 .section-head{font-size:14px;font-weight:800;color:var(--text);letter-spacing:.04em}
 .subhead{font-size:13px;font-weight:700;color:var(--muted)}
@@ -44,17 +239,17 @@ main{padding:8px 12px;display:grid;gap:12px}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .pack{justify-content:space-between}
 
-/* ───────── Chips（統一尺寸＋觸控區） */
+/*  Chips */
 .chip{border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:48px}
 .chip.pill{border-radius:999px}
 .chip.lg{font-size:16px}
 .chip.box{width:100%;justify-content:flex-start}
 .chip.active{background:var(--chip-active);border-color:var(--primary);box-shadow:0 0 0 1px var(--primary) inset}
 
-.emoji{width:22px;height:22px;display:inline-grid;place-items:center;font-size:20px;line-height:1}  /* 統一 icon 尺寸 */
+.emoji{width:22px;height:22px;display:inline-grid;place-items:center;font-size:20px;line-height:1}  /*  icon  */
 .label{flex:1}
 
-/* ───────── Grids */
+/*  Grids */
 .grid{display:grid;gap:10px}
 .grid-3{grid-template-columns:repeat(3,1fr)}
 @media (max-width:480px){
@@ -66,17 +261,17 @@ main{padding:8px 12px;display:grid;gap:12px}
 @media (min-width:520px){ .group-grid{grid-template-columns:repeat(3,1fr)} }
 .items{grid-template-columns:repeat(3,1fr)}
 
-/* ───────── Inputs */
+/*  Inputs */
 .amt{min-width:140px;background:var(--chip-bg);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
 .elevated{border-radius:12px;border:1px solid var(--border);background:var(--chip-bg);color:var(--text);padding:12px 14px}
 input::placeholder{color:var(--muted)}
 .date-wrap{display:flex;align-items:center;gap:6px}
 .i-cal{filter:brightness(1.2)}
 
-/* ───────── Pocket badge（餘額） */
+/*  Pocket badge */
 .badge{background:var(--badge);color:#d9f5f8;border:1px solid var(--border);padding:2px 8px;border-radius:999px;font-weight:800}
 
-/* ───────── Recent list */
+/*  Recent list */
 .list{display:grid;gap:8px}
 .row.recent{display:grid;grid-template-columns: 95px 1fr auto;gap:8px;align-items:center;padding:10px;background:var(--chip-bg);border:1px solid var(--border);border-radius:12px}
 .r-date{color:var(--muted)}
@@ -84,10 +279,10 @@ input::placeholder{color:var(--muted)}
 .r-amt.pos{color:var(--pos)}
 .r-amt.neg{color:var(--neg)}
 
-/* ───────── Footer */
+/*  Footer */
 .foot{padding:14px 12px;color:var(--muted);text-align:center}
 
-/* ───────── Mobile */
+/*  Mobile */
 @media (max-width:480px){
   .topbar{flex-wrap:wrap}
   .tabs{top:auto;position:static}
@@ -101,7 +296,7 @@ input::placeholder{color:var(--muted)}
   gap:12px;
 }
 
-/* 可點小豬卡片（button） */
+/* button */
 .pocket{
   position:relative;
   display:flex;
@@ -120,7 +315,7 @@ input::placeholder{color:var(--muted)}
 }
 .pocket:focus{ outline:2px solid var(--focus,#30c4d3); outline-offset:2px; }
 
-/* 小豬 SVG 等比縮放、顏色用 currentColor 可被主題/active 控制 */
+/*  SVG  currentColor /active  */
 .pocket .pig{
   width:56px; height:56px;
   color:#93a2ad;
@@ -143,7 +338,7 @@ input::placeholder{color:var(--muted)}
   box-shadow:0 0 0 1px rgba(255,255,255,.06) inset;
 }
 
-/* 選取狀態 */
+/*  */
 .pocket.active{
   border-color:rgba(48,196,211,.6);
   box-shadow:0 0 0 2px rgba(48,196,211,.35) inset, 0 10px 24px rgba(48,196,211,.1);
@@ -151,12 +346,12 @@ input::placeholder{color:var(--muted)}
 .pocket.active .pig{ color:#30c4d3; }
 .pocket.active .name{ color:#e9fbff; }
 
-/* 小尺寸裝置更好點 */
+/*  */
 @media (max-width:380px){
   .pocket{ min-height:106px; }
   .pocket .pig{ width:52px; height:52px; }
 }
-/* 口袋小豬：一致大小 + 深色主題對比 */
+/*  +  */
 #pockets-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -191,8 +386,8 @@ input::placeholder{color:var(--muted)}
 .pocket .name { font-size: 14px; color: var(--text-subtle, #9fb3bf); }
 .pocket .amt  { font-size: 18px; font-weight: 700; color: var(--text, #e7f2f7); }
 
-/* 小螢幕也好點 */
+/*  */
 @media (max-width: 380px){
   .pocket .pig { width: 40px; height: 40px; }
   .pocket .amt { font-size: 17px; }
-}
+}. mjj
