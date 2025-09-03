@@ -74,28 +74,36 @@ async function ensureRoom(){
   const s = await get(root);
   if(!s.exists()) await set(root, { _ts: Date.now() });
 }
+/* 建立 catalog 索引：確保先完成再渲染 */
+let catalog = null;
+let catalogIndex = null;
+
+function buildCatalogIndex(cat){
+  const groups = {};   // groupName -> { name, emoji }
+  const items  = {};   // itemId   -> { id, label, emoji, group }
+  // groups
+  for(const g of cat.groups){
+    groups[g.name] = { name: g.name, emoji: g.emoji || '📁' };
+  }
+  // items
+  for(const it of cat.items){
+    items[it.id] = {
+      id: it.id,
+      label: it.label,
+      emoji: it.emoji || '🔸',
+      group: it.group
+    };
+  }
+  return { groups, items };
+}
 
 async function ensureCatalog(){
-  const base = ref(db, `rooms/${state.space}/catalog`);
-  const s = await get(base);
-  state.catalog = s.exists() ? s.val() : { categories:{ restaurant:[], personal:[] } };
-  if(!s.exists()) await set(base, state.catalog);
-  buildCatalogIndex(state.catalog);
-  renderGroups(); renderItems();
+  if(catalog) return;
+  const snap = await get(ref(dbRoom, 'catalog')); // 你的 DB 參照
+  catalog = snap.val();
+  catalogIndex = buildCatalogIndex(catalog);
 }
 
-function buildCatalogIndex(raw){
-  const flat = Array.isArray(raw)
-    ? raw
-    : [].concat(raw?.categories?.restaurant||[], raw?.categories?.personal||[], raw?.categories||[]);
-  const by = { restaurant:[], personal:[] };
-  flat.forEach(x=>{
-    const item = { id:x.id||x.label, label:x.label||x.id, kind: normalizeKind(x.kind) };
-    if (REST_GROUPS.includes(item.kind)) by.restaurant.push(item);
-    else by.personal.push(item);
-  });
-  state.catalogIndex = by;
-}
 
 function categoriesFor(scope, group){
   const pool = scope==='restaurant' ? (state.catalogIndex?.restaurant||[]) : (state.catalogIndex?.personal||[]);
@@ -209,30 +217,28 @@ function watchBalances(){
 
 // ── 付款人/收款人 ──────────────────────
 function renderPayers(){
-  const row = byId('payers-row'); if(!row) return;
-  if(state.io==='income'){
-    row.innerHTML = [
-      {key:'Jack', label:'👨‍🍳 Jack'},
-      {key:'Wal',  label:'👨‍🍳 Wal'}
-    ].map(x=>`<button class="chip pill lg" data-payer="${x.key}">${x.label}</button>`).join('');
-  }else{
-    row.innerHTML = [
-      {key:'J',  label:'👨‍🍳 J'},
-      {key:'W',  label:'👨‍🍳 W'},
-      {key:'JW', label:'👥 JW'}
-    ].map(x=>`<button class="chip pill lg" data-payer="${x.key}">${x.label}</button>`).join('');
-  }
-  row.onclick = (e)=>{
-    const btn = e.target.closest('[data-payer]'); if(!btn) return;
-    $$('#payers-row .active').forEach(x=>x.classList.remove('active'));
-    btn.classList.add('active'); state.payer = btn.dataset.payer;
-  };
-  const def = row.querySelector('[data-payer]');
-  if(def){ def.classList.add('active'); state.payer = def.dataset.payer; }
-  const label = row.parentElement?.previousElementSibling?.querySelector('.subhead');
-  if(label) label.textContent = (state.io==='income') ? '收款人' : '付款人';
-}
+  const row = document.getElementById('payers-row');
+  row.innerHTML = '';
 
+  const opts = (state.io === 'income')
+    ? [{key:'jack', label:'Jack', emoji:'👨‍🍳'},{key:'wal',label:'Wal',emoji:'👨‍🍳'}]
+    : [{key:'J',label:'J',emoji:'👨‍🍳'},{key:'W',label:'W',emoji:'👨‍🍳'},{key:'JW',label:'JW',emoji:'👥'}];
+  const frag = document.createDocumentFragment();
+  for(const p of opts){
+    const b = document.createElement('button');
+    b.className = 'chip pill is-option';
+    b.dataset.payer = p.key;
+    b.innerHTML = `<span class="emoji">${p.emoji}</span><span class="label">${p.label}</span>`;
+    if(state.payer === p.key) b.classList.add('active');
+    b.addEventListener('click', ()=>{
+      state.payer = p.key;
+      renderPayers(); // 切換高亮
+    });
+    frag.appendChild(b);
+  }
+  row.appendChild(frag);
+}
+    
 // ── IO / Scope 切換 ────────────────────
 (function bindIO(){
   const wrap = byId('chip-io'); if(!wrap) return;
@@ -260,27 +266,163 @@ function renderPayers(){
 
 // ── 分類大項 / 項目 ────────────────────
 function renderGroups(){
-  const box = byId('group-grid'); if(!box) return;
-  const gs = groupsFor(state.io, state.scope);
-  box.innerHTML = gs.map(g=>`<button class="chip" data-group="${g}">${g}</button>`).join('');
-  box.onclick = (e)=>{
-    const btn = e.target.closest('[data-group]'); if(!btn) return;
-    $$('#group-grid .active').forEach(x=>x.classList.remove('active'));
-    btn.classList.add('active'); state.group = btn.dataset.group; state.item='';
-    renderItems();
-  };
+  const wrap = document.getElementById('group-grid');
+  wrap.innerHTML = '';
+  if(!state.io || !state.scope || !catalogIndex) return;
+
+  const wanted = groupsFor(state.io, state.scope); // 你既有的函式
+  const frag = document.createDocumentFragment();
+  const frag = document.createDocumentFragment();
+  for(const p of opts){
+    const b = document.createElement('button');
+    b.className = 'chip pill is-option';
+    b.dataset.payer = p.key;
+    b.innerHTML = `<span class="emoji">${p.emoji}</span><span class="label">${p.label}</span>`;
+    if(state.payer === p.key) b.classList.add('active');
+    b.addEventListener('click', ()=>{
+      state.payer = p.key;
+      renderPayers(); // 切換高亮
+    });
+    frag.appendChild(b);
+  }
+  row.appendChild(frag);
 }
+5) 小豬口袋 icon（SVG）仍可用，並統一樣式
+若你已把 <symbol id="pig-icon">…</symbol> 放進 index.html，渲染口袋時用 <svg><use href="#pig-icon"/></svg>，並讓外觀跟上面一樣：
+
+js
+複製程式碼
+function renderPockets(){
+  const row = document.getElementById('pockets-row');
+  row.innerHTML = '';
+  const pockets = [
+    {key:'restaurant', label:'餐廳',  amt: balances.restaurant || 0},
+    {key:'jack',       label:'Jack',  amt: balances.jack || 0},
+    {key:'wal',        label:'Wal',   amt: balances.wal  || 0},
+  ];
+  const frag = document.createDocumentFragment();
+  pockets.forEach(p=>{
+    const card = document.createElement('button');
+    card.className = 'pocket is-option';
+    card.dataset.pocket = p.key;
+    if(state.pocket === p.key) card.classList.add('active');
+    card.innerHTML = `
+      <svg class="pig" viewBox="0 0 167.18021 139.17355" aria-hidden="true">
+        <use href="#pig-icon"></use>
+      </svg>
+      <div class="meta">
+        <div class="name">${p.label}</div>
+        <div class="amt">${formatAmt(p.amt)}</div>
+      </div>`;
+    card.addEventListener('click', ()=>{
+      state.pocket = p.key;
+      renderPockets(); // 高亮
+    });
+    frag.appendChild(card);
+  });
+  row.appendChild(frag);
+}
+6) 分類渲染「很慢」的成因 & 解法
+常見兩個原因：
+
+原因 A： 每次點任何按鈕都「同時重建 group + items + 事件監聽」。
+處理： 僅在 state.group 變更時才呼叫 renderItems()；其餘只更新高亮。上面範例已避開這點。
+
+原因 B： catalog 資料量大、每次都從 RTDB 抓取。
+處理： ensureCatalog() 只拉一次，記在記憶體（如上），必要時再加 localStorage 快取：
+
+js
+複製程式碼
+async function ensureCatalog(){
+  if(catalog) return;
+  const cached = localStorage.getItem('cf_catalog_v2');
+  if(cached){
+    catalog = JSON.parse(cached);
+  }else{
+    const snap = await get(ref(dbRoom, 'catalog'));
+    catalog = snap.val();
+    localStorage.setItem('cf_catalog_v2', JSON.stringify(catalog));
+  }
+  catalogIndex = buildCatalogIndex(catalog);
+}
+之後若你更新了 catalog，記得把 key 改成 cf_catalog_v3 之類（你前面提到的「cache key」就是這個）。
+
+其他：normalizeKind（保留）
+你要保留這段是對的（舊資料對應新命名）——請放在 app.js 靠上位置：
+
+js
+複製程式碼
+const normalizeKind = k => {
+  if(!k) return '';
+  if(k === '餐廳收入') return '營業收入';
+  if(k === '其他')     return '其他支出';
+  return k;
+};
+最後給你一個初始化順序（app.js 主要流程）
+確保畫面載入順序正確、避免「icon 沒出現」：
+
+js
+複製程式碼
+(async function init(){
+  bindConnectButton();      // 連線按鈕
+  bindIOScopeChips();       // 支出/收入 + 餐廳/個人
+  bindAddItem();            // 新增項目
+  bindSubmit();             // 送出
+
+  await connectIfSaved();   // 若記過 room 就自動連上
+  await ensureCatalog();    // 只抓一次，建立 catalogIndex
+
+  watchRecent();            // 最近 20 筆
+  watchBalances();          // 三個口袋餘額
+
+  // 初始渲染
+  renderPockets();
+  renderPayers();
+  renderGroups();
+  renderItems();
+})();
+
+
+  wanted.forEach(gName=>{
+    const g = catalogIndex.groups[gName] || {name:gName, emoji:'📁'};
+    const btn = document.createElement('button');
+    btn.className = 'chip box is-option';
+    btn.dataset.group = gName;
+    btn.innerHTML = `<span class="emoji">${g.emoji}</span><span class="label">${g.name}</span>`;
+    if(state.group === gName) btn.classList.add('active');
+    btn.addEventListener('click', ()=>{
+      state.group = gName;
+      renderGroups();      // 切換高亮
+      renderItems();       // 依群組渲染項目
+    });
+    frag.appendChild(btn);
+  });
+  wrap.appendChild(frag);
+}
+
 function renderItems(){
-  const box = byId('items-grid'); if(!box) return;
-  if(!state.group){ box.innerHTML = `<div class="muted">（請先選分類大項）</div>`; return; }
-  const items = categoriesFor(state.scope, state.group);
-  box.innerHTML = items.map(it=>`<button class="chip" data-item="${it.label}">${it.label}</button>`).join('')
-    || `<div class="muted">（此群暫無項目，可於下方「新增項目」）</div>`;
-  box.onclick = (e)=>{
-    const btn = e.target.closest('[data-item]'); if(!btn) return;
-    $$('#items-grid .active').forEach(x=>x.classList.remove('active'));
-    btn.classList.add('active'); state.item = btn.dataset.item;
-  };
+  const wrap = document.getElementById('items-grid');
+  wrap.innerHTML = '';
+  if(!state.group || !catalogIndex) return;
+
+  // 只挑屬於該 group 的 items
+  const frag = document.createDocumentFragment();
+  for(const id in catalogIndex.items){
+    const it = catalogIndex.items[id];
+    if(it.group !== state.group) continue;
+
+    const btn = document.createElement('button');
+    btn.className = 'chip box is-option';
+    btn.dataset.itemId = id;
+    btn.innerHTML = `<span class="emoji">${it.emoji}</span><span class="label">${it.label}</span>`;
+    if(state.itemId === id) btn.classList.add('active');
+    btn.addEventListener('click', ()=>{
+      state.itemId = id;
+      renderItems(); // 高亮切換
+    });
+    frag.appendChild(btn);
+  }
+  wrap.appendChild(frag);
 }
 
 // ── 新增項目 ───────────────────────────
