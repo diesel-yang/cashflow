@@ -18,7 +18,6 @@
 html,body{
   margin:0; padding:0;
   font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;
-  font-size:18px; line-height:1.4;
   background:var(--bg); color:var(--text);
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
@@ -43,8 +42,8 @@ img{max-width:100%; display:block}
   border:1px solid var(--border); border-radius:12px; padding:12px 14px; font-size:18px;
 }
 .btn{
-  background:var(--primary); color:#001114; border:none; border-radius:12px;
-  padding:12px 14px; font-weight:700; cursor:pointer; font-size:18px;
+  background:var(--primary); color:#001114; border:none;
+  font-weight:700; cursor:pointer; font-size:18px;
 }
 .btn.danger{background:#dc5b6b; color:#fff}
 .btn.success{background:#2ac3a2; color:#001114}
@@ -64,8 +63,7 @@ main{padding:8px 12px; display:grid; gap:12px}
 
 /* Cards */
 .card{
-  background:var(--card); border:1px solid var(--border); border-radius:16px;
-  padding:12px 12px 14px; display:grid; gap:12px;
+  background:var(--card); border:1px solid var(--border);display:grid; gap:12px;
   box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset;
 }
 .section-head{font-size:16px; font-weight:800; letter-spacing:.04em}
@@ -76,12 +74,10 @@ main{padding:8px 12px; display:grid; gap:12px}
 /* Chips */
 .chip{
   border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
-  border-radius:12px; padding:12px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-  min-height:50px; font-size:18px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px;font-size:18px;
   transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 .chip.pill{border-radius:999px}
-.chip.lg{font-size:18px}
 .chip.box{width:100%; justify-content:flex-start}
 .chip.active{background:var(--chip-active); border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset}
 
@@ -96,12 +92,12 @@ main{padding:8px 12px; display:grid; gap:12px}
 /* Inputs */
 .amt{
   min-width:160px; background:var(--chip-bg); color:var(--text);
-  border:1px solid var(--border); border-radius:12px; padding:12px 14px; font-size:18px;
+  border:1px solid var(--border); font-size:18px;
   font-variant-numeric:tabular-nums;
 }
 .elevated{
-  border-radius:12px; border:1px solid var(--border);
-  background:var(--chip-bg); color:var(--text); padding:12px 14px; font-size:18px;
+  bborder:1px solid var(--border);
+  background:var(--chip-bg); color:var(--text); font-size:18px;
 }
 input::placeholder{color:var(--muted)}
 .date-wrap{display:flex; align-items:center; gap:8px}
@@ -127,10 +123,9 @@ input::placeholder{color:var(--muted)}
 .list .row{
   display:grid; grid-template-columns: 95px 1fr auto;
   gap:8px; align-items:center; padding:10px;
-  background:var(--chip-bg); border:1px solid var(--border); border-radius:12px;
+  border:1px solid var(--border); border-radius:12px;
 }
-.list .r-date{color:var(--muted)}
-.list .r-amt{font-weight:800; font-size:18px}
+.list .r-amt{font-weight:800}
 .list .r-amt.pos{color:var(--pos)}
 .list .r-amt.neg{color:var(--neg)}
 
@@ -154,3 +149,45 @@ input::placeholder{color:var(--muted)}
 .pocket.restaurant .pig{ color:#12b4c4 }
 .pocket.jack .pig{ color:#f39c12 }
 .pocket.wal .pig{ color:#e74c3c }
+
+/* ====== Mobile-friendly tweaks (override) ====== */
+html { font-size: clamp(16px, 1.8vw + 12px, 19px); }
+body { line-height: 1.45; }
+
+.card { padding: 14px 14px 16px; border-radius: 18px; }
+.chip { min-height: 50px; padding: 12px 14px; border-radius: 14px; }
+.chip.lg { font-size: 1rem; }
+.input, .amt, .elevated { padding: 13px 14px; border-radius: 14px; }
+.btn { padding: 13px 16px; border-radius: 14px; }
+
+/* 讓主要兩欄（IO/金額/日期）排得更穩定 */
+.row.pack { gap: 10px; }
+#rec-amt { flex: 1 1 140px; }
+.date-wrap { flex: 0 0 auto; }
+
+/* Pocket 與付款人區塊：統一卡片尺寸與間距 */
+.grid-3, #payers-row, #pockets-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 380px){
+  .grid-3, #payers-row, #pockets-row { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}
+
+/* 最近 20 筆：金額顏色與字級更清楚 */
+.list .row { background: var(--chip-bg); }
+.list .r-date { color: #fff; opacity: .85; }   /* <- 需求#4 改白色 */
+.list .r-amt  { color: #fff; font-size: 1.02rem; }
+
+/* 付款人（J/W/JW）與 IO/用途（餐廳/個人）的「高亮」樣式一致 */
+.chip.is-option.active,
+#chip-io .chip.active,
+#chip-scope .chip.active,
+#payers-row .chip.active {
+  background: var(--chip-active);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent) inset;
+}
+
+/* 用途：讓文字在左、選項在右（需求#3） */
+.scope-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.scope-row .subhead { margin:0; }
+.scope-row .chip-group { display:flex; gap:10px; }
+
