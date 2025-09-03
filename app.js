@@ -200,11 +200,11 @@ function watchRecent(){
   if (state.space) doConnect();
 })();
 
-// ── 口袋小豬（SVG 版 + 即時餘額 + 顏色分級） ────────
+// 口袋定義（改用 SVG；badge 會顯示 R / J / W）
 const POCKETS = [
-  { key:'restaurant', name:'餐廳' },
-  { key:'jack',       name:'Jack' },
-  { key:'wal',        name:'Wal'  },
+  { key:'restaurant', name:'餐廳', badge:'R' },
+  { key:'jack',       name:'Jack', badge:'J' },
+  { key:'wal',        name:'Wal',  badge:'W'  },
 ];
 
 function renderPockets(){
