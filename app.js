@@ -1,9 +1,13 @@
-// app.js  (ES Module)
-
+// app.js（整合版） -------------------------------------------------------------
+// 使用 ES Module CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, child, get, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getDatabase, ref, child, get, set, push, update, onValue, query,
+  orderByChild, limitToLast
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+// --- 你的 Firebase 設定（你提供的那組） ---
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
@@ -15,351 +19,93 @@ const firebaseConfig = {
   measurementId: "G-G2DVG798M8"
 };
 
-// 綁定連線按鈕
-const btnConnect = document.getElementById('btn-connect');
-btnConnect.addEventListener('click', async () => {
-  const space = document.getElementById('space-code').value.trim();
-  if (!space) {
-    alert('請輸入共享代號');
-    return;
-  }
-
-  try {
-    // 初始化 Firebase 資料節點
-    const root = ref(db, `rooms/${space}`);
-    const snap = await get(root);
-    if (!snap.exists()) {
-      await set(root, { _ts: Date.now() });
-    }
-
-    // 更新 UI 狀態
-    btnConnect.textContent = '已連線';
-    btnConnect.dataset.state = 'on';
-    btnConnect.classList.remove('danger');
-    btnConnect.classList.add('success');
-
-    // 存下代號
-    localStorage.setItem('CF_SPACE', space);
-
-    // 後續載入 catalog / records
-    await ensureCatalog();
-    watchRecent();
-
-  } catch (err) {
-    console.error('連線失敗', err);
-    alert('❌ 連線失敗：' + err.message);
-  }
-});
-
+// --- 初始化 Firebase ---
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 const auth = getAuth(app);
+await signInAnonymously(auth).catch(console.error);
 
+// --- 全域狀態 ---
 const state = {
   space: localStorage.getItem('CF_SPACE') || '',
-  io: null,              // 'expense' | 'income'
-  scope: null,           // 'restaurant' | 'personal'
-  group: null,           // 大項（中文）
-  cat: null,             // 細項 label
-  pocket: 'restaurant',  // 付費口袋：restaurant|jack|wal
-  payer: 'J',            // 付款人：J|W|JW；收入時為 Jack|Wal
-  balances: { restaurant:0, jack:0, wal:0 },
-
-  catalog: null,         // 原始 catalog
-  catalogIndex: null,    // {restaurant:[], personal:[]}
-  recent: []
+  io: 'expense',          // 'expense' | 'income'
+  scope: 'restaurant',    // 'restaurant' | 'personal'
+  group: '',              // 目前所選分類大項
+  item:  '',              // 目前所選項目
+  catalog: null,
+  catalogIndex: null
 };
 
-const $ = (q, el=document)=> el.querySelector(q);
-const $$= (q, el=document)=> el.querySelectorAll(q);
-const ce = (tag, props={}) => Object.assign(document.createElement(tag), props);
+window.CF = { state }; // 方便除錯用
 
-function todayISO(){
-  const d = new Date();
-  const z = n=> String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
-}
-function toast(m){ console.log('[Toast]', m); }
-function fmt(n){ const s=(+n||0).toFixed(0); return s.replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+// --- 小工具 ---
+const $ = (sel, el=document) => el.querySelector(sel);
+const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+const byId = id => document.getElementById(id);
 
-// Tabs
-$$('.tab').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    $$('.tab').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    const tab = b.dataset.tab;
-    $$('.page').forEach(p=>p.classList.remove('show'));
-    $(`#page-${tab}`).classList.add('show');
-  });
-});
+const money = n => (Number(n)||0).toLocaleString('zh-TW');
 
-// Topbar
-$('#space-code').value = state.space;
-$('#btn-connect').addEventListener('click', connectSpace);
-function setConnectedUI(on){
-  $('#btn-connect').textContent = on ? '已連線' : '連線';
-  $('#btn-connect').classList.toggle('on', on);
-}
-
-// 記帳互動
-$('#chip-io').addEventListener('click', (e)=>{
-  const b = e.target.closest('button[data-io]');
-  if(!b) return;
-  state.io = b.dataset.io;
-  $$('#chip-io .chip').forEach(x=>x.classList.toggle('active', x===b));
-  renderPayers();
-  state.group = null; state.cat = null;
-  renderGroups(); renderItems();
-});
-
-$('#chip-scope').addEventListener('click', (e)=>{
-  const b = e.target.closest('button[data-scope]');
-  if(!b) return;
-  state.scope = b.dataset.scope;
-  $$('#chip-scope .chip').forEach(x=>x.classList.toggle('active', x===b));
-  state.group = null; state.cat = null;
-  renderGroups(); renderItems();
-});
-
-$('#btn-add-cat').addEventListener('click', addCustomItem);
-$('#btn-submit').addEventListener('click', submitRecord);
-$('#rec-date').value = todayISO();
-
-// pockets / payers
-function renderPockets(){
-  const host = $('#pockets-row'); host.innerHTML = '';
-  const pockets = [
-    { key:'restaurant', emoji:'🏦', name:'餐廳' },
-    { key:'jack',       emoji:'👨‍🍳', name:'Jack' },
-    { key:'wal',        emoji:'👨‍🍳', name:'Wal'  },
-  ];
-  pockets.forEach(p=>{
-    const btn = ce('button',{ className:'chip box pocket' });
-    btn.innerHTML = `
-      <span class="emoji" aria-hidden="true">${p.emoji}</span>
-      <span class="label">${p.name}</span>
-      <span class="badge">${fmt(state.balances[p.key]||0)}</span>
-    `;
-    btn.addEventListener('click', ()=>{
-      state.pocket = p.key;
-      $$('#pockets-row .chip').forEach(x=>x.classList.remove('active'));
-      btn.classList.add('active');
-    });
-    host.appendChild(btn);
-  });
-  host.firstElementChild?.classList.add('active');
-  state.pocket = 'restaurant';
-}
-
-function renderPayers(){
-  const host = $('#payers-row'); host.innerHTML = '';
-  const isIncome = state.io === 'income';
-  const btns = isIncome
-    ? [{t:'Jack', v:'Jack'}, {t:'Wal', v:'Wal'}]
-    : [{t:'J', v:'J'}, {t:'W', v:'W'}, {t:'JW', v:'JW'}];
-
-  btns.forEach(({t,v},i)=>{
-    const b = ce('button',{ className:'chip pill payer', textContent:t });
-    b.addEventListener('click', ()=>{
-      $$('#payers-row .chip').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.payer = v;
-    });
-    if(i===0){ b.classList.add('active'); state.payer=v; }
-    host.appendChild(b);
-  });
-}
-
-// Groups / Items
-const GROUP_META = {
-  '營業收入': { name:'營業收入', emoji:'💵' },
-  '銷貨成本': { name:'銷貨成本', emoji:'🥬' },
-  '人事':     { name:'人事',     emoji:'👥' },
-  '水電租網': { name:'水電租網', emoji:'🏠' },
-  '行銷':     { name:'行銷',     emoji:'📣' },
-  '物流運輸': { name:'物流運輸', emoji:'🚛' },
-  '行政稅務': { name:'行政稅務', emoji:'🧾' },
-
-  '薪資收入': { name:'薪資收入', emoji:'🧾' },
-  '投資獲利': { name:'投資獲利', emoji:'📈' },
-  '其他收入': { name:'其他收入', emoji:'🎁' },
-
-  '飲食':     { name:'飲食',     emoji:'🍔' },
-  '治裝':     { name:'治裝',     emoji:'👕' },
-  '住房':     { name:'住房',     emoji:'🏠' },
-  '交通':     { name:'交通',     emoji:'🚇' },
-  '教育':     { name:'教育',     emoji:'📚' },
-  '娛樂':     { name:'娛樂',     emoji:'🎬' },
-  '稅捐':     { name:'稅捐',     emoji:'💸' },
-  '醫療':     { name:'醫療',     emoji:'🩺' },
-  '其他支出': { name:'其他支出', emoji:'🔖' },
+// 舊命名 → 新命名（避免你舊資料 kind 落差）
+const normalizeKind = (k) => {
+  if (!k) return '';
+  if (k === '餐廳收入') return '營業收入';
+  if (k === '其他')   return '其他支出';
+  return k;
 };
 
+// --- 分類大項（UI 用） ---
+const REST_GROUPS = ['營業收入','銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務'];
+const PERS_INCOME_GROUPS = ['薪資收入','投資獲利','其他收入'];
+const PERS_EXPENSE_GROUPS = ['飲食','治裝','住房','交通','教育','娛樂','稅捐','醫療','其他支出'];
+
+// 依 IO 與 Scope 給出可選的大項
 function groupsFor(io, scope){
-  if(!io || !scope) return [];
   if(scope === 'restaurant'){
-    return (io === 'income')
-      ? ['營業收入']
-      : ['銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務'];
+    return (io === 'income') ? ['營業收入'] : REST_GROUPS.filter(g => g!=='營業收入');
   }else{
-    return (io === 'income')
-      ? ['薪資收入','投資獲利','其他收入']
-      : ['飲食','治裝','住房','交通','教育','娛樂','稅捐','醫療','其他支出'];
+    return (io === 'income') ? PERS_INCOME_GROUPS : PERS_EXPENSE_GROUPS;
   }
 }
 
-}function buildCatalogIndex(raw){
+// --- Catalog 索引：扁平或 categories.* 都能吃 ---
+function buildCatalogIndex(raw){
   const cat = raw ?? state.catalog ?? {};
-  // 允許三種來源：扁平陣列 / categories.restaurant / categories.personal
   const flat = Array.isArray(cat) ? cat
     : [].concat(cat.categories?.restaurant || [],
                 cat.categories?.personal   || [],
                 cat.categories || []);
 
-  // 舊命名 → 新命名
-  const normalizeKind = (k) => {
-    if (!k) return '';
-    if (k === '餐廳收入') return '營業收入';
-    if (k === '其他')   return '其他支出';
-    return k;
-  };
-
-  const byScope = { restaurant:[], personal:[] };
-  const REST_GROUPS = new Set(['營業收入','銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務']);
-
+  const by = { restaurant:[], personal:[] };
   flat.forEach(x=>{
     const item = {
       id   : x.id    || x.label,
       label: x.label || x.id,
       kind : normalizeKind(x.kind || '')
     };
-    if(REST_GROUPS.has(item.kind)) byScope.restaurant.push(item);
-    else                           byScope.personal.push(item);
+    if (REST_GROUPS.includes(item.kind) || item.kind === '營業收入') by.restaurant.push(item);
+    else by.personal.push(item);
   });
 
-  state.catalogIndex = byScope;
-
-  // Console 診斷
-  console.log('[catalogIndex]',
-    'restaurant=', byScope.restaurant.length,
-    'personal=',   byScope.personal.length
-  );
+  state.catalogIndex = by;
+  console.log('[catalogIndex]', 'restaurant=', by.restaurant.length, 'personal=', by.personal.length);
 }
-function categoriesFor(io, scope, group){
+
+// 依大項取出細項
+function categoriesFor(scope, group){
   const pool = (scope==='restaurant')
     ? (state.catalogIndex?.restaurant || [])
     : (state.catalogIndex?.personal   || []);
-
   return pool.filter(c => c.kind === group);
 }
 
-function renderGroups(){
-  const host = $('#group-grid'); host.innerHTML='';
-  const arr = groupsFor(state.io, state.scope);
-  arr.forEach(name=>{
-    const meta = GROUP_META[name] || {name, emoji:'•'};
-    const b = ce('button',{ className:'chip box group' });
-    b.innerHTML = `<span class="emoji">${meta.emoji}</span><span class="label">${meta.name}</span>`;
-    b.addEventListener('click', ()=>{
-      state.group = name; state.cat = null;
-      $$('#group-grid .chip').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderItems();
-    });
-    host.appendChild(b);
-  });
-}
-function renderItems(){
-  const host = $('#items-grid'); host.innerHTML='';
-  if(!state.group){ host.innerHTML = `<div class="muted">（此群暫無項目）</div>`; return; }
-  const arr = categoriesFor(state.io, state.scope, state.group);
-  if(!arr.length){ host.innerHTML = `<div class="muted">（此群暫無項目）</div>`; return; }
-  arr.forEach(x=>{
-    const b = ce('button',{ className:'chip pill item', textContent:x.label });
-    b.addEventListener('click', ()=>{
-      state.cat = x.label;
-      $$('#items-grid .chip').forEach(n=>n.classList.remove('active'));
-      b.classList.add('active');
-    });
-    host.appendChild(b);
-  });
-}
-
-// 新增自訂細項（吃目前大項為 kind）
-async function addCustomItem(){
-  const name = ($('#new-cat-name').value||'').trim();
-  if(!name){ toast('請輸入項目名稱'); return; }
-  if(!state.group){ toast('請先選擇分類大項'); return; }
-  const scope = state.scope || 'personal';
-  const item = { id:name, label:name, kind:state.group };
-
-  const base = ref(db, `rooms/${state.space}/catalog/categories/${scope}`);
-  await set(push(base), item);
-  (scope==='restaurant' ? state.catalogIndex.restaurant : state.catalogIndex.personal).push(item);
-  $('#new-cat-name').value = '';
-  renderItems(); toast('已新增');
-}
-
-// 送出
-async function submitRecord(){
-  const amt = Number($('#rec-amt').value||0);
-  if(!state.io)    return toast('請先選擇「支出／收入」');
-  if(!state.scope) return toast('請先選擇「用途」');
-  if(!state.group) return toast('請先選擇「分類大項」');
-  if(!state.cat)   return toast('請選擇或新增一個項目');
-  if(!(amt>0))     return toast('請輸入金額');
-
-  const rec = {
-    ts: Date.now(),
-    date: $('#rec-date').value || todayISO(),
-    io: state.io,
-    scope: state.scope,
-    group: state.group,
-    cat: state.cat,
-    pocket: state.pocket,
-    payer: state.payer,
-    amount: amt,
-    note: $('#rec-note').value||''
-  };
-  await set(push(ref(db, `rooms/${state.space}/records`)), rec);
-
-  $('#rec-amt').value=''; $('#rec-note').value='';
-  toast('已送出');
-}
-
-// 最近 20 筆
-function watchRecent(){
-  onValue(ref(db, `rooms/${state.space}/records`), snap=>{
-    const vals = snap.val() || {};
-    const arr = Object.values(vals).sort((a,b)=>b.ts-a.ts).slice(0,20);
-    state.recent = arr; renderRecent();
-  });
-}
-function renderRecent(){
-  const host = $('#recent-list'); host.innerHTML='';
-  state.recent.forEach(x=>{
-    const row = ce('div',{className:'row recent'});
-    row.innerHTML = `
-      <div class="r-date">${x.date}</div>
-      <div class="r-text">${x.scope==='restaurant'?'餐廳':'個人'}・${x.group}・${x.cat}</div>
-      <div class="r-amt ${x.io==='income'?'pos':'neg'}">${x.io==='income'?'+':'-'}${fmt(x.amount)}</div>
-    `;
-    host.appendChild(row);
-  });
-}
-
-// 連線 & Catalog
-$('#rec-date').value = todayISO();
-async function connectSpace(){
-  const space = ($('#space-code').value||'').trim();
-  if(!space) return toast('請輸入共享代號');
-  state.space = space; localStorage.setItem('CF_SPACE', space);
-
-  const root = ref(db, `rooms/${space}`);
+// --- 連線與載入 ---
+async function ensureRoom(){
+  if(!state.space) throw new Error('缺少共享代號');
+  const root = ref(db, `rooms/${state.space}`);
   const snap = await get(root);
-  if(!snap.exists()){ await set(root, { _ts: Date.now() }); }
-
-  await ensureCatalog();
-  setConnectedUI(true);
-  watchRecent();
+  if(!snap.exists()){
+    await set(root, { _ts: Date.now() });
+  }
 }
 
 async function ensureCatalog(){
@@ -368,35 +114,251 @@ async function ensureCatalog(){
   if(snap.exists()){
     state.catalog = snap.val();
   }else{
-    // 如果 DB 沒 catalog，就放空骨架（可直接在 UI 新增）
+    // 建空的骨架，讓 UI 可以先新增
     state.catalog = { categories:{ restaurant:[], personal:[] } };
     await set(base, state.catalog);
   }
-
   buildCatalogIndex(state.catalog);
-
-  // 預設 UI 狀態
-  renderPockets();
-  renderPayers();
-  state.io = 'expense';
-  state.scope = 'restaurant';
-  $('#chip-io [data-io="expense"]').classList.add('active');
-  $('#chip-scope [data-scope="restaurant"]').classList.add('active');
-  renderGroups();
-  renderItems();
-
-  // 若索引是 0，協助提示
-  const rCount = state.catalogIndex?.restaurant?.length || 0;
-  const pCount = state.catalogIndex?.personal?.length || 0;
-  if(rCount + pCount === 0){
-    console.warn('[catalog] 目前沒有任何分類項目。請到 Realtime DB 匯入 catalog_full.json → /rooms/<space>/catalog');
-    $('#items-grid').innerHTML = `<div class="muted">（尚未匯入分類。請到 Firebase 匯入 catalog）</div>`;
-  }
+  renderGroups();   // 依現況畫大項
+  renderItems();    // 如果已有 group 就畫細項
 }
 
-// Auth
-onAuthStateChanged(auth, u=>{ if(u) setConnectedUI(!!state.space); });
-signInAnonymously(auth).catch(console.error);
+// 監看最近 20 筆
+function watchRecent(){
+  const q = query(ref(db, `rooms/${state.space}/records`), orderByChild('ts'), limitToLast(20));
+  onValue(q, (snap)=>{
+    const box = byId('recent-list');
+    if(!box) return;
+    const rows = [];
+    snap.forEach(ch=>{
+      const r = ch.val();
+      rows.push(r);
+    });
+    rows.sort((a,b)=>b.ts-a.ts);
+    box.innerHTML = rows.map(r=>{
+      const sign = r.io==='expense' ? '-' : '+';
+      const tag  = `${r.scope==='restaurant'?'餐廳':'個人'}．${r.group || ''}．${r.item || ''}`;
+      const dstr = new Date(r.date||r.ts).toLocaleDateString('zh-TW');
+      return `<div class="row">
+        <div class="muted">${dstr}</div>
+        <div class="tag">${tag}</div>
+        <div class="${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount)}</div>
+      </div>`;
+    }).join('') || `<div class="muted">（目前尚無記錄）</div>`;
+  });
+}
 
-// boot
-renderPockets(); renderPayers();
+// --- UI 綁定 ---
+// 連線按鈕
+(function bindConnect(){
+  const btn = byId('btn-connect');
+  if(!btn) return;
+  // 預填 space
+  const spaceInput = byId('space-code');
+  if(spaceInput && state.space) spaceInput.value = state.space;
+
+  btn.addEventListener('click', async ()=>{
+    try{
+      state.space = (spaceInput?.value || '').trim();
+      if(!state.space){ alert('請先輸入共享代號'); return; }
+
+      await ensureRoom();
+      await ensureCatalog();
+      watchRecent();
+
+      // 標記 UI 已連線
+      btn.textContent = '已連線';
+      btn.dataset.state = 'on';
+      btn.classList.remove('danger');
+      btn.classList.add('success');
+      localStorage.setItem('CF_SPACE', state.space);
+    }catch(err){
+      console.error(err);
+      alert('連線失敗：' + (err?.message||err));
+    }
+  });
+})();
+
+// IO 切換（支出 / 收入）
+(function bindIOChips(){
+  const wrap = byId('chip-io');
+  if(!wrap) return;
+  wrap.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-io]');
+    if(!btn) return;
+    $$('#chip-io .active').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.io = btn.dataset.io;     // 'expense' | 'income'
+    state.group = '';
+    state.item  = '';
+    renderGroups();
+    renderItems();
+  });
+})();
+
+// 用途切換（餐廳 / 個人）
+(function bindScopeChips(){
+  const wrap = byId('chip-scope');
+  if(!wrap) return;
+  wrap.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-scope]');
+    if(!btn) return;
+    $$('#chip-scope .active').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.scope = btn.dataset.scope; // 'restaurant' | 'personal'
+    state.group = '';
+    state.item  = '';
+    renderGroups();
+    renderItems();
+  });
+})();
+
+// 選擇分類大項
+function renderGroups(){
+  const box = byId('groups-grid');
+  if(!box) return;
+  const gs = groupsFor(state.io, state.scope);
+  box.innerHTML = gs.map(g=>{
+    const active = (g===state.group) ? 'active':'';
+    return `<button class="chip ${active}" data-group="${g}">${g}</button>`;
+  }).join('') || `<div class="muted">（請先選支出/收入與用途）</div>`;
+
+  box.onclick = (e)=>{
+    const btn = e.target.closest('[data-group]');
+    if(!btn) return;
+    $$('#groups-grid .active').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.group = btn.dataset.group;
+    state.item  = '';
+    renderItems();
+  };
+}
+
+// 顯示大項下的細項
+function renderItems(){
+  const box = byId('items-grid');
+  if(!box) return;
+  if(!state.group){
+    box.innerHTML = `<div class="muted">（請先選分類大項）</div>`;
+    return;
+  }
+  const items = categoriesFor(state.scope, state.group);
+  box.innerHTML = items.map(it=>{
+    const active = (it.label===state.item) ? 'active':'';
+    return `<button class="chip ${active}" data-item="${it.label}">${it.label}</button>`;
+  }).join('') || `<div class="muted">（此群暫無項目，可於下方「新增項目」）</div>`;
+
+  box.onclick = (e)=>{
+    const btn = e.target.closest('[data-item]');
+    if(!btn) return;
+    $$('#items-grid .active').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.item = btn.dataset.item;
+  };
+}
+
+// 新增分類項目（會回寫到 /catalog）
+(function bindAddItem(){
+  const btn = byId('btn-add-item');
+  const input = byId('new-item-name');
+  if(!btn || !input) return;
+
+  btn.addEventListener('click', async ()=>{
+    const name = (input.value||'').trim();
+    if(!name){ alert('請輸入項目名稱'); return; }
+    if(!state.space){ alert('請先連線'); return; }
+    if(!state.group){ alert('請先選分類大項'); return; }
+
+    // 準備一筆 catalog item
+    const item = { id: name, label: name, kind: state.group };
+
+    // 以扁平陣列模式回寫（最穩）
+    const base = ref(db, `rooms/${state.space}/catalog`);
+    const snap = await get(base);
+    let cat = snap.exists() ? snap.val() : [];
+    if(!Array.isArray(cat)){
+      // 若不是陣列，轉換成陣列（merge 原本 categories.*）
+      const flat = [].concat(cat.categories?.restaurant || [],
+                             cat.categories?.personal   || [],
+                             cat.categories || []);
+      cat = flat;
+    }
+    cat.push(item);
+    await set(base, cat);
+
+    // 更新本地索引與 UI
+    state.catalog = cat;
+    buildCatalogIndex(cat);
+    input.value = '';
+    renderItems();
+  });
+})();
+
+// 送出記帳
+(function bindSubmit(){
+  const btn = byId('btn-submit');
+  if(!btn) return;
+
+  btn.addEventListener('click', async ()=>{
+    try{
+      if(!state.space){ alert('請先連線'); return; }
+
+      const amount = Number((byId('amount')?.value || '').replace(/[^\d.-]/g,'')) || 0;
+      if(!amount){ alert('請輸入金額'); return; }
+      if(!state.group){ alert('請先選分類大項'); return; }
+      if(!state.item){  alert('請先選項目'); return; }
+
+      const dateStr = byId('date')?.value || ''; // yyyy-mm-dd
+      const ts = dateStr ? Date.parse(dateStr) : Date.now();
+
+      const note = byId('note')?.value || '';
+
+      const rec = {
+        ts,
+        date: dateStr,
+        io: state.io,               // expense|income
+        scope: state.scope,         // restaurant|personal
+        group: state.group,
+        item : state.item,
+        amount,
+        payer: currentPayer(),      // 'J' | 'W' | 'JW' 或 'Jack'/'Wal'（依你的 UI 實作）
+        pocket: currentPocket(),    // 'restaurant'|'jack'|'wal'（依你的 UI 實作）
+        note
+      };
+
+      const key = push(ref(db, `rooms/${state.space}/records`)).key;
+      await set(ref(db, `rooms/${state.space}/records/${key}`), rec);
+
+      // reset 部分欄位
+      if(byId('amount')) byId('amount').value = '';
+      if(byId('note'))   byId('note').value   = '';
+      console.log('saved:', rec);
+      alert('已送出');
+    }catch(err){
+      console.error(err);
+      alert('送出失敗：' + (err?.message||err));
+    }
+  });
+
+  function currentPayer(){
+    // 依你的 UI 取選中的付款人；這裡提供退路（無則回傳空字串）
+    const el = $('#payers .active');
+    return el?.dataset?.payer || '';
+  }
+  function currentPocket(){
+    // 依你的 UI 取選中的付費口袋；這裡提供退路（無則回傳 'restaurant'）
+    const el = $('#pockets .active');
+    return el?.dataset?.pocket || 'restaurant';
+  }
+})();
+
+// --- 預設 UI 初始化（不連線也先把 chip 樣式設好） ---
+(function bootUI(){
+  // 如果頁面上有 chip，幫第一顆加 active 也行；這裡改用狀態渲染：
+  const ioBtn = $(`#chip-io [data-io="${state.io}"]`);
+  if(ioBtn) ioBtn.classList.add('active');
+  const scopeBtn = $(`#chip-scope [data-scope="${state.scope}"]`);
+  if(scopeBtn) scopeBtn.classList.add('active');
+  renderGroups();
+  renderItems();
+})();
