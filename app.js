@@ -98,32 +98,63 @@ async function addCatalogItem(catId,name){
   await dbRef(`${cloudPath()}/catalog/items/${key}`).set(list);
 }
 
-// Category logic (io × scope)
+// ── 群組標籤（中文） ──────────────────────────
 const GROUP_META = {
-  revenue:{name:'營業收入', emoji:'💵'},
-  cogs:{name:'銷貨成本', emoji:'🥬'},
-  personnel:{name:'人事', emoji:'👥'},
-  utilities:{name:'水電租網', emoji:'🏠'},
-  marketing:{name:'行銷', emoji:'📣'},
-  logistics:{name:'物流', emoji:'🚛'},
-  admin:{name:'行政稅務', emoji:'🧾'},
-  p_income:{name:'個人收入', emoji:'💼'},
-  p_expense:{name:'個人支出', emoji:'🍔'},
+  // 餐廳
+  '營業收入': { name:'營業收入', emoji:'💵' },      // ← UI 用「營業收入」，同時相容 catalog 的「餐廳收入」
+  '銷貨成本': { name:'銷貨成本', emoji:'🥬' },
+  '人事':     { name:'人事',     emoji:'👥' },
+  '水電租網': { name:'水電租網', emoji:'🏠' },
+  '行銷':     { name:'行銷',     emoji:'📣' },
+  '物流運輸': { name:'物流運輸', emoji:'🚛' },
+  '行政稅務': { name:'行政稅務', emoji:'🧾' },
+
+  // 個人－收入（3 大項）
+  '薪資收入': { name:'薪資收入', emoji:'🧾' },
+  '投資獲利': { name:'投資獲利', emoji:'📈' },
+  '其他收入': { name:'其他收入', emoji:'🎁' },
+
+  // 個人－支出（9 大類）
+  '飲食':     { name:'飲食',     emoji:'🍔' },
+  '治裝':     { name:'治裝',     emoji:'👕' },
+  '住房':     { name:'住房',     emoji:'🏠' },
+  '交通':     { name:'交通',     emoji:'🚇' },
+  '教育':     { name:'教育',     emoji:'📚' },
+  '娛樂':     { name:'娛樂',     emoji:'🎬' },
+  '稅捐':     { name:'稅捐',     emoji:'💸' },
+  '醫療':     { name:'醫療',     emoji:'🩺' },
+  '其他支出': { name:'其他支出', emoji:'🔖' },       // ← UI 用「其他支出」，同時相容 catalog 的「其他」
 };
-function groupsFor(io,scope){
-  if(!io||!scope) return [];
-  if(scope==='restaurant'){
-    return io==='income'
-      ? ['revenue']
-      : ['cogs','personnel','utilities','marketing','logistics','admin'];
+
+// ── 要顯示哪些「大項群組」（依 收支 × 用途） ─────────────────
+function groupsFor(io, scope){
+  if(!io || !scope) return [];
+  if(scope === 'restaurant'){
+    return (io === 'income')
+      ? ['營業收入']
+      : ['銷貨成本','人事','水電租網','行銷','物流運輸','行政稅務'];
   }else{ // personal
-    return io==='income' ? ['p_income'] : ['p_expense'];
+    return (io === 'income')
+      ? ['薪資收入','投資獲利','其他收入']   // 三大類
+      : ['飲食','治裝','住房','交通','教育','娛樂','稅捐','醫療','其他支出']; // 九大類
   }
 }
-function categoriesFor(io,scope){
-  const src = scope==='restaurant' ? (state.catalog?.categories?.restaurant||[]) : (state.catalog?.categories?.personal||[]);
-  const allowed = new Set(groupsFor(io,scope));
-  return src.filter(c=> allowed.has(c.kind));
+
+// ── 依目前狀態挑出要顯示的「細項」 ───────────────────────────
+function categoriesFor(io, scope){
+  const src = (scope === 'restaurant')
+    ? (state.catalog?.categories?.restaurant || [])
+    : (state.catalog?.categories?.personal   || []);
+
+  // 允許舊 catalog 值：把「餐廳收入」視為「營業收入」；把「其他」視為「其他支出」
+  const normalize = (k)=>{
+    if(k === '餐廳收入') return '營業收入';
+    if(k === '其他')   return '其他支出';
+    return k || '';
+  };
+
+  const allow = new Set(groupsFor(io, scope));
+  return src.filter(c => allow.has(normalize(c.kind)));
 }
 
 // Render: manual select（只列「大項」）
