@@ -8,20 +8,22 @@
   <link rel="stylesheet" href="style.css?v=3601">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">💨</div>
-      <div>
-        <div class="brand-name">極速記帳</div>
-        <div class="brand-sub">Jack / Wal / 餐廳</div>
-      </div>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">💨</span>
+    <div>
+      <div class="brand-name">極速記帳</div>
+      <div class="brand-sub"> </div>
     </div>
-    <div class="space"></div>
+  </div>
+  <div class="space"></div>
 
-    <!-- 共享代號（房間） + 連線 -->
-    <input id="room" class="input" placeholder="共享代號（room）">
-    <button id="btn-connect" class="btn-elevated ghost pressable" title="連線 / 斷線">未連線</button>
-  </header>
+  <!-- 共享代號輸入 -->
+  <input id="space-code" class="input" placeholder="輸入共享代號…" aria-label="共享代號" />
+
+  <!-- 連線按鈕：預設 danger（紅色） -->
+  <button id="btn-connect" class="btn danger" aria-label="連線">連線</button>
+</header>
 
   <!-- 分頁（記帳 / 報表 / 設定） -->
   <nav class="tabs">
