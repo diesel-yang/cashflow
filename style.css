@@ -1,193 +1,108 @@
-/* 極速記帳：深色高對比（mobile-first） */
+/* ==========================================================================
+   極速記帳 - 深色高對比主題（mobile-first）
+   ========================================================================== */
+
+/* 主題變數 */
 :root{
-  --bg:#0a0f11;
-  --card:#10191c;
-  --text:#f3fbfd;
-  --muted:#a8c0c7;
-  --primary:#12b4c4;
-  --primary-weak:#0f8f9b;
-  --accent:#12b4c4;
-  --border:#203033;
-  --chip-bg:#0f1719;
-  --chip-active:#0f2f35;
-  --badge:#0d2226;
-  --pos:#76e3a8;
-  --neg:#ff9aa0;
+  --bg:#0a0f11; --card:#10191c; --text:#f6fbff; --muted:#a9bec6;
+  --primary:#12b4c4; --primary-weak:#0f8f9b; --border:#223337;
+  --chip-bg:#0f1719; --chip-active:#10323a; --accent:#13c1d3;
+  --pos:#75e5aa; --neg:#ff9aa0;
+  --radius:14px; --gap:12px; --tap:52px; --fs:17px;
 }
 *{box-sizing:border-box}
 html,body{
-  margin:0; padding:0;
-  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial;
-  background:var(--bg); color:var(--text);
+  margin:0; background:var(--bg); color:var(--text);
+  font:600 var(--fs)/1.35 -apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC",Segoe UI,Roboto,Arial;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-img{max-width:100%; display:block}
-.hidden{display:none!important}
-.muted{color:var(--muted)}
-.mt8{margin-top:8px}.mt12{margin-top:12px}
-.flex{flex:1}
+img{max-width:100%;display:block}
 
-/* Topbar & Tabs */
-.topbar{
-  display:flex; align-items:center; gap:12px;
-  padding:10px 12px; position:sticky; top:0; z-index:3; background:var(--bg);
-}
-.brand{display:flex; align-items:center; gap:8px}
-.brand .logo{font-size:26px}
-.brand-name{font-weight:700}
-.brand-sub{font-size:.8rem; color:var(--muted)}
+/* Topbar */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 12px;position:sticky;top:0;background:var(--bg);z-index:3}
+.brand{display:flex;align-items:center;gap:8px}
+.brand .logo{font-size:24px}
+.brand-name{font-weight:800}
+.brand-sub{font-size:12px;color:var(--muted)}
 .space{flex:1}
-.input{
-  width:100%; background:var(--chip-bg); color:var(--text);
-  border:1px solid var(--border); border-radius:12px; padding:12px 14px; font-size:18px;
-}
-.btn{
-  background:var(--primary); color:#001114; border:none;
-  font-weight:700; cursor:pointer; font-size:18px;
-}
-.btn.danger{background:#dc5b6b; color:#fff}
-.btn.success{background:#2ac3a2; color:#001114}
 
-.tabs{
-  display:flex; gap:8px; padding:8px 12px; position:sticky; top:54px; background:var(--bg); z-index:2;
+/* Tabs */
+.tabs{display:flex;gap:10px;padding:8px 12px;position:sticky;top:56px;background:var(--bg);z-index:2}
+.tab{border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
+.tab.active{
+  border-color:var(--primary);background:var(--chip-active);
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 10px 22px rgba(0,0,0,.36),0 0 0 2px color-mix(in srgb,var(--primary) 28%, transparent);
 }
-.tab{
-  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
-  padding:10px 14px; border-radius:999px; cursor:pointer; font-size:16px;
-}
-.tab.active{background:var(--chip-active); border-color:var(--primary)}
 
-main{padding:8px 12px; display:grid; gap:12px}
-.page{display:none}
-.page.show{display:block}
-
-/* Cards */
-.card{
-  background:var(--card); border:1px solid var(--border);display:grid; gap:12px;
-  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset;
+/* Elevated 通用（日期選擇器同款立體） */
+.elevated{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 8px 18px rgba(0,0,0,.35);
+  transition:transform .06s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+  border-radius:12px;
 }
-.section-head{font-size:16px; font-weight:800; letter-spacing:.04em}
-.subhead{font-size:15px; font-weight:700; color:var(--muted)}
-.row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
-.pack{justify-content:space-between}
+.pressable:hover{transform:translateY(-1px)}
+.pressable:active{transform:translateY(0);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 4px 10px rgba(0,0,0,.35)}
+
+.btn-elevated{composes:elevated;padding:12px 18px;border-radius:14px;font-weight:800;letter-spacing:.02em}
+.btn-elevated.primary{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #000) 0%, var(--primary) 100%);
+  color:#001114;border-color:color-mix(in srgb, var(--primary) 60%, var(--border));
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 10px 24px rgba(0,0,0,.45),0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent)
+}
+.btn-elevated.ghost{background:var(--chip-bg);color:var(--text)}
+
+/* 主容器與卡片 */
+main{padding:12px;display:grid;gap:16px}
+.page{display:none}.page.show{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:12px 12px 14px;display:grid;gap:12px;box-shadow:0 0 0 1px rgba(255,255,255,.03) inset}
+.section-head{font-size:15px;font-weight:800}
+.subhead{font-size:14px;font-weight:700;color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.card>*+*{margin-top:12px}
+.card{margin-bottom:16px}
+
+/* 輸入類 */
+.input,.amt{height:var(--tap);padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--chip-bg);color:var(--text)}
+.amt{min-width:150px;font-variant-numeric:tabular-nums}
+.date-wrap{display:flex;align-items:center;gap:8px}
 
 /* Chips */
-.chip{
-  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
-  cursor:pointer; display:inline-flex; align-items:center; gap:8px;font-size:18px;
-  transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-.chip.pill{border-radius:999px}
-.chip.box{width:100%; justify-content:flex-start}
-.chip.active{background:var(--chip-active); border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset}
+.chip{min-height:var(--tap);border:1px solid var(--border);background:var(--chip-bg);color:var(--text);border-radius:999px;padding:10px 14px;display:inline-flex;align-items:center;gap:10px;cursor:pointer}
+.chip.box{border-radius:var(--radius);width:100%;justify-content:flex-start}
+.chip.lg{font-size:18px}
+.chip.active{background:var(--chip-active);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.emoji{width:24px;height:24px;display:grid;place-items:center;font-size:20px}
+.label{flex:1}
 
-/* Grids */
-.grid{display:grid; gap:10px}
+/* grid */
+.grid{display:grid;gap:10px}
 .grid-3{grid-template-columns:repeat(3,1fr)}
-.chip-grid{display:grid; gap:10px}
-.group-grid{grid-template-columns:repeat(2,1fr)}
-@media (min-width:520px){ .group-grid{grid-template-columns:repeat(3,1fr)} }
-.items{grid-template-columns:repeat(3,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:560px){ .grid-3{grid-template-columns:repeat(2,1fr)} }
 
-/* Inputs */
-.amt{
-  min-width:160px; background:var(--chip-bg); color:var(--text);
-  border:1px solid var(--border); font-size:18px;
-  font-variant-numeric:tabular-nums;
-}
-.elevated{
-  bborder:1px solid var(--border);
-  background:var(--chip-bg); color:var(--text); font-size:18px;
-}
-input::placeholder{color:var(--muted)}
-.date-wrap{display:flex; align-items:center; gap:8px}
-.i-cal{filter:brightness(1.2)}
+/* 用途在右：兩顆鈕等寬撐滿行寬 */
+.scope-head{display:flex;align-items:center;justify-content:space-between}
+#chip-scope.chip-group.wide{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;flex:1;margin-left:12px}
+#chip-scope .chip{composes:elevated pressable;width:100%;justify-content:center;border-radius:12px}
 
-/* Pockets (SVG pig + 金額) */
-#pockets-row{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
-.pocket{
-  display:flex; align-items:center; gap:10px;
-  border:1px solid var(--border); background:var(--card);
-  border-radius:14px; padding:10px 12px; cursor:pointer;
-  transition:transform .05s ease, box-shadow .15s ease, border-color .15s ease;
-}
-.pocket:hover{ transform:translateY(-1px) }
-.pocket.active{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent) }
-.pocket .pig{ width:44px; height:44px; color:#93a2ad }
-.pocket .meta{ display:flex; flex-direction:column; line-height:1.15 }
-.pocket .name{ font-size:14px; color:var(--muted) }
-.pocket .amt{ font-size:20px; font-weight:800 }
+/* 付款人與口袋 */
+#payers-row .chip{justify-content:center}
+#payers-row .chip.active{border-color:var(--accent);background:var(--chip-active)}
 
-/* Recent */
-.list{display:grid; gap:8px}
-.list .row{
-  display:grid; grid-template-columns: 95px 1fr auto;
-  gap:8px; align-items:center; padding:10px;
-  border:1px solid var(--border); border-radius:12px;
-}
-.list .r-amt{font-weight:800}
-.list .r-amt.pos{color:var(--pos)}
-.list .r-amt.neg{color:var(--neg)}
+#pockets-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pocket{display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--card);border-radius:var(--radius);padding:10px 12px;cursor:pointer}
+.pocket.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%, transparent)}
+.pocket .pig{width:44px;height:44px;color:#8fb0bb}
+.pocket .meta{display:flex;flex-direction:column;line-height:1.1}
+.pocket .name{font-size:15px;color:var(--muted)}
+.pocket .amt{font-size:18px;font-weight:800}
+
+/* 最近 20 筆 */
+.list{display:grid;gap:8px}
+.list .row{display:grid;grid-template-columns:88px 1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--chip-bg);color:#fff}
+.r-amt{font-weight:800}.r-amt.pos{color:var(--pos)}.r-amt.neg{color:var(--neg)}
 
 /* Footer */
-.foot{padding:16px 12px; color:var(--muted); text-align:center}
-
-/* Mobile */
-@media (max-width:480px){
-  .topbar{flex-wrap:wrap}
-  .tabs{top:auto; position:static}
-  .items{grid-template-columns:repeat(2,1fr)}
-  .list .row{grid-template-columns:84px 1fr auto}
-}
-
-/* Focus */
-:where(button,.chip,.pocket,input):focus-visible{
-  outline:2px solid var(--primary); outline-offset:2px;
-}
-
-/* 口袋不同顏色（可選） */
-.pocket.restaurant .pig{ color:#12b4c4 }
-.pocket.jack .pig{ color:#f39c12 }
-.pocket.wal .pig{ color:#e74c3c }
-
-/* ====== Mobile-friendly tweaks (override) ====== */
-html { font-size: clamp(16px, 1.8vw + 12px, 19px); }
-body { line-height: 1.45; }
-
-.card { padding: 14px 14px 16px; border-radius: 18px; }
-.chip { min-height: 50px; padding: 12px 14px; border-radius: 14px; }
-.chip.lg { font-size: 1rem; }
-.input, .amt, .elevated { padding: 13px 14px; border-radius: 14px; }
-.btn { padding: 13px 16px; border-radius: 14px; }
-
-/* 讓主要兩欄（IO/金額/日期）排得更穩定 */
-.row.pack { gap: 10px; }
-#rec-amt { flex: 1 1 140px; }
-.date-wrap { flex: 0 0 auto; }
-
-/* Pocket 與付款人區塊：統一卡片尺寸與間距 */
-.grid-3, #payers-row, #pockets-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
-@media (max-width: 380px){
-  .grid-3, #payers-row, #pockets-row { grid-template-columns: repeat(3, 1fr); gap: 10px; }
-}
-
-/* 最近 20 筆：金額顏色與字級更清楚 */
-.list .row { background: var(--chip-bg); }
-.list .r-date { color: #fff; opacity: .85; }   /* <- 需求#4 改白色 */
-.list .r-amt  { color: #fff; font-size: 1.02rem; }
-
-/* 付款人（J/W/JW）與 IO/用途（餐廳/個人）的「高亮」樣式一致 */
-.chip.is-option.active,
-#chip-io .chip.active,
-#chip-scope .chip.active,
-#payers-row .chip.active {
-  background: var(--chip-active);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent) inset;
-}
-
-/* 用途：讓文字在左、選項在右（需求#3） */
-.scope-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.scope-row .subhead { margin:0; }
-.scope-row .chip-group { display:flex; gap:10px; }
-
+.foot{padding:14px 12px;color:var(--muted);text-align:center}
