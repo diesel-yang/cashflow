@@ -156,3 +156,43 @@ input::placeholder{color:var(--muted)}
   .pocket{ min-height:106px; }
   .pocket .pig{ width:52px; height:52px; }
 }
+/* 口袋小豬：一致大小 + 深色主題對比 */
+#pockets-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pocket {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border, #2b3b44);
+  background: var(--card, #0f1a1f);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform .05s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.pocket:hover { transform: translateY(-1px); }
+.pocket.active {
+  border-color: var(--accent, #14b8a6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #14b8a6) 25%, transparent);
+}
+
+.pocket .pig {
+  width: 44px; height: 44px; flex: 0 0 44px;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.pocket .meta { display:flex; flex-direction:column; line-height:1.15; }
+.pocket .name { font-size: 14px; color: var(--text-subtle, #9fb3bf); }
+.pocket .amt  { font-size: 18px; font-weight: 700; color: var(--text, #e7f2f7); }
+
+/* 小螢幕也好點 */
+@media (max-width: 380px){
+  .pocket .pig { width: 40px; height: 40px; }
+  .pocket .amt { font-size: 17px; }
+}
