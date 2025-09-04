@@ -17,8 +17,8 @@ const firebaseConfig = {
   appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
   measurementId: "G-G2DVG798M8"
 };
-const app  = initializeApp(firebaseConfig);
-const db   = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 /* ───────────────── DOM utils ───────────────── */
 const $  = (s, el=document)=>el.querySelector(s);
@@ -327,3 +327,128 @@ byId('space-code')?.addEventListener('keydown', (e)=>{
   renderPockets(); renderPayers(); renderGroups(); renderItems();
   bindTabs(); bindIOChips(); bindScopeChips();
 })();
+
+let state = {
+  io: 'expense',
+  scope: 'restaurant',
+  payer: 'J',
+  pocket: '餐廳',       // 口袋
+  group: '',            // 類別
+  kind: ''              // 項目
+};
+
+// 支出 / 收入
+bindChipGroup('#chip-io', btn => state.io = btn.dataset.io);
+
+// 用途
+bindChipGroup('#chip-scope', btn => {
+  state.scope = btn.dataset.scope; 
+  renderGroups(); renderItems([]);
+});
+
+// 付款人/收款人（按鈕在 #payers-row 動態生成）
+$('#payers-row').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  $$('#payers-row button').forEach(b=>b.classList.toggle('active', b===btn));
+  state.payer = btn.dataset.payer;
+});
+// 快取目前 roomRef
+let roomCode = '';
+let roomRef = null;
+
+// 建房/連線（允許匿名登入較穩）
+async function ensureAuth(){
+  try{
+    await firebase.auth().signInAnonymously();
+  }catch(e){}
+}
+
+async function ensureRoom(code){
+  if(!code) throw new Error('no-room-code');
+  await ensureAuth();
+  roomCode = code;
+  roomRef = db.ref(`rooms/${code}`);
+  // 建立必要節點
+  await roomRef.child('catalog').update({ _init:true });
+  return roomRef;
+}
+
+// 監看最近 20 筆
+function watchRecent(){
+  if(!roomRef) return;
+  roomRef.child('records').limitToLast(20).on('value', snap=>{
+    const list = $('#recent-list'); list.innerHTML = '';
+    const val = snap.val() || {};
+    Object.entries(val).reverse().forEach(([id, r])=>{
+      const row = document.createElement('div');
+      row.className = 'row recent';
+      row.innerHTML = `
+        <div class="r-date">${r.date || ''}</div>
+        <div class="r-title">${r.kind || ''}</div>
+        <div class="r-amt ${Number(r.amt)>=0?'pos':'neg'}">${r.amt}</div>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+// 監看口袋餘額
+function watchBalances(){
+  if(!roomRef) return;
+  roomRef.child('balances').on('value', snap=>{
+    const m = snap.val() || {};
+    // 依 pocket 卡片 DOM 更新金額與正負
+    $$('#pockets-row .pocket').forEach(card=>{
+      const name = card.dataset.pocket;
+      const v = Number(m[name]||0);
+      card.querySelector('.amt').textContent = v.toLocaleString();
+      card.classList.toggle('positive', v>=0);
+      card.classList.toggle('negative', v<0);
+    });
+  });
+}
+
+// 送出
+$('#btn-submit').addEventListener('click', async ()=>{
+  if(!roomRef) return alert('請先連線');
+  const amt = Number($('#rec-amt').value||0) * (state.io==='expense' ? -1 : 1);
+  const rec = {
+    io: state.io,
+    scope: state.scope,
+    payer: state.payer,
+    pocket: state.pocket,
+    group: state.group,
+    kind: state.kind,
+    note: $('#rec-note').value || '',
+    amt,
+    date: $('#rec-date').value || new Date().toISOString().slice(0,10),
+    ts: Date.now()
+  };
+  const id = roomRef.child('records').push().key;
+  const updates = {};
+  updates[`records/${id}`] = rec;
+  updates[`balances/${state.pocket}`] = firebase.database.ServerValue.increment(amt);
+  await roomRef.update(updates);
+  $('#rec-note').value=''; $('#rec-amt').value='';
+  // 新增項目自動寫回 catalog
+  if(rec.kind){
+    roomRef.child(`catalog/${state.scope}/${state.group}/${rec.kind}`).set(true);
+  }
+});
+
+// 連線按鈕
+$('#btn-connect').addEventListener('click', async ()=>{
+  const code = ($('#space-code').value || '').trim();
+  if(!code) return alert('請輸入共享代號');
+  try{
+    await ensureRoom(code);
+    watchRecent(); watchBalances();
+    // 成功 → 按鈕改綠
+    const btn = $('#btn-connect');
+    btn.classList.remove('danger'); btn.classList.add('success');
+    btn.textContent = '已連線';
+  }catch(err){
+    console.error(err);
+    alert('連線失敗：' + (err.message||'Permission denied'));
+  }
+});
