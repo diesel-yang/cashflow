@@ -186,3 +186,84 @@ input::placeholder{color:var(--muted)}
   outline:2px solid var(--primary);
   outline-offset:2px;
 }
+
+/* ====== Layout hotfix ====== */
+.top-eqgrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr; /* 收支 / 金額 / 日期 三欄等寬 */
+  gap:12px;
+}
+.chip-group.two{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.chip-group.wide{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+
+/* Tabs + chip 高亮（按下去要有邊框亮起） */
+.tab.elevated,.chip.pressable,.btn-elevated{
+  border:1px solid var(--border,#203033);
+  background: var(--chip-bg,#0f1719);
+  border-radius:12px;
+  padding:10px 14px;
+  transition:.15s;
+}
+.tab.elevated.active,
+.chip.pressable.active,
+.btn-elevated.primary{
+  border-color: var(--primary,#12b4c4);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary,#12b4c4) 35%, transparent);
+}
+
+/* 日期：維持立體樣式 */
+.elevated{
+  background:linear-gradient(#0e1619,#0b1215);
+  border:1px solid #1c2a2e;
+  border-radius:12px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25);
+  padding:12px 14px;
+}
+
+/* 金額大字置中 */
+#rec-amt{
+  text-align:center;
+  font-weight:800;
+  font-size:20px;
+}
+
+/* 口袋：2× 大、置中 */
+#pockets-row{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+}
+.pocket{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; padding:14px 12px; border:1px solid var(--border); background:var(--card);
+  border-radius:16px;
+}
+.pocket .pig{ width:88px; height:88px; color:#4aa3ff; }      /* 2× */
+.pocket .name{ font-size:16px; color:var(--muted); }
+.pocket .amt { font-size:22px; font-weight:800; }
+
+/* 口袋高亮 */
+.pocket.active{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* 口袋淨值正負色（--pos/--neg 仍沿用） */
+.pocket.positive .amt{ color: var(--pos,#76e3a8); }
+.pocket.negative .amt{ color: var(--neg,#ff9aa0); }
+.pocket.negative .pig { color:#ff5b5b; }  /* 小豬紅色 */
+
+/* 付款人 chip 同步高亮語彙 */
+#payers-row .chip{ width:100%; justify-content:flex-start; }
+#payers-row .chip.active{ border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary)35%,transparent); }
+
+/* 新增/送出：同尺寸、同立體 */
+.row.cols-3{ display:grid; grid-template-columns: 1fr auto; gap:12px; }
+.btn-elevated.ghost{ color:#e6f6f9; background:#0f1719; border:1px solid #214048; }
+.btn-elevated.primary{ background:#12b4c4; color:#001114; border:1px solid #0e9dae; font-weight:800; letter-spacing:.08em; }
+
+/* 近 20 筆白字 */
+.list .r-amt, .list .r-title, .list .r-date{ color:#fff; }
+
+/* 連線按鈕：未連線紅色、已連線綠色 */
+.btn.danger{ background:#e35b66; color:#fff; }
+.btn.success{ background:#2ac3a2; color:#001114; }
+
