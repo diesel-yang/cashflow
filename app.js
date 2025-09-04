@@ -1,4 +1,4 @@
-// app.js v3.9.1 — 互動全面修正：連線/高亮/入口置中/口袋 2x/即時餘額/新增項目寫回
+// app.js v3.9.1（整合修正版 - 只使用 v10 模組 API）
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -17,8 +17,8 @@ const firebaseConfig = {
   appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
   measurementId: "G-G2DVG798M8"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
 
 /* ───────────────── DOM utils ───────────────── */
 const $  = (s, el=document)=>el.querySelector(s);
@@ -35,10 +35,11 @@ const state = {
   item: "",
   payer: "",
   pocket: "",
-  catalog: null, catalogIndex: null,
+  catalog: null,
+  catalogIndex: null,
 };
 
-/* ───────────────── Groups ───────────────── */
+/* ───────────────── Groups / Icons ───────────────── */
 const REST_GROUPS = ['營業收入','銷貨成本','人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
 const PERS_INCOME_GROUPS  = ['薪資收入','投資獲利','其他收入'];
 const PERS_EXPENSE_GROUPS = ['飲食','治裝','住房','交通','教育','娛樂','稅捐','醫療','其他支出'];
@@ -49,7 +50,6 @@ function groupsFor(io, scope){
   return (io==='income') ? PERS_INCOME_GROUPS : PERS_EXPENSE_GROUPS;
 }
 
-/* ───────────────── Icons ───────────────── */
 const GROUP_ICON_MAP = {
   '營業收入':'💰','銷貨成本':'📦','人事':'🧑‍🍳','水電/租金/網路':'🏠',
   '行銷':'📣','物流/運輸':'🚚','行政/稅務':'🧾',
@@ -69,18 +69,12 @@ function normalizeKind(k){
 
 /* ───────────────── Room / Catalog ───────────────── */
 async function ensureRoom(){
+  if(!state.space) throw new Error('no-room-code');
   const root = ref(db, `rooms/${state.space}`);
   const s = await get(root);
   if(!s.exists()) await set(root, { _ts: Date.now() });
 }
-async function ensureCatalog(){
-  const base = ref(db, `rooms/${state.space}/catalog`);
-  const s = await get(base);
-  state.catalog = s.exists()?s.val():[];
-  if(!s.exists()) await set(base, state.catalog);
-  buildCatalogIndex(state.catalog);
-  renderGroups(); renderItems();
-}
+
 function buildCatalogIndex(raw){
   const flat = Array.isArray(raw)? raw
     : [].concat(raw?.categories?.restaurant||[], raw?.categories?.personal||[], raw?.categories||[]);
@@ -91,6 +85,16 @@ function buildCatalogIndex(raw){
   });
   state.catalogIndex = by;
 }
+
+async function ensureCatalog(){
+  const base = ref(db, `rooms/${state.space}/catalog`);
+  const s = await get(base);
+  state.catalog = s.exists()?s.val():[];
+  if(!s.exists()) await set(base, state.catalog);
+  buildCatalogIndex(state.catalog);
+  renderGroups(); renderItems();
+}
+
 function categoriesFor(scope, group){
   const pool = scope==='restaurant'? (state.catalogIndex?.restaurant||[]) : (state.catalogIndex?.personal||[]);
   return pool.filter(c=>c.kind===group);
@@ -103,7 +107,7 @@ function watchRecent(){
   onValue(q, snap=>{
     const rows=[]; snap.forEach(ch=>rows.push(ch.val())); rows.sort((a,b)=>b.ts-a.ts);
     recentList.innerHTML = rows.map(r=>{
-      const sign = r.io==='expense'?'-':'+'; 
+      const sign = r.io==='expense'?'-':'+';
       const d = r.date||new Date(r.ts).toLocaleDateString('zh-TW');
       return `<div class="row">
         <div class="r-date">${d}</div>
@@ -172,7 +176,7 @@ function watchBalances(){
   });
 }
 
-/* ───────────────── 付款人 / 收款人（emoji 一致） ───────────────── */
+/* ───────────────── 付款人 / 收款人 ───────────────── */
 function renderPayers(){
   const row=byId('payers-row'); if(!row) return;
   const data = (state.io==='income')
@@ -254,11 +258,11 @@ byId('btn-submit')?.addEventListener('click',async()=>{
 function bindTabs(){
   $$('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
-      const target = tab.getAttribute('data-target');
+      const page = tab.getAttribute('data-page');
       $$('.tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
       $$('.page').forEach(p=>p.classList.remove('show'));
-      if(target) byId(target)?.classList.add('show');
+      if(page) byId(`page-${page}`)?.classList.add('show');
     });
   });
 }
@@ -295,160 +299,32 @@ function doConnect(){
     .then(ensureCatalog)
     .then(()=>{
       renderPockets(); renderPayers(); watchRecent(); watchBalances();
-      btnConnect.textContent='連線中';
+      btnConnect.textContent='已連線';
       btnConnect.classList.add('success');
       btnConnect.classList.remove('danger');
       localStorage.setItem('CF_SPACE',state.space);
     })
     .catch(err=>{
       console.error(err);
-      alert('連線失敗，請稍後再試');
+      alert('連線失敗（可能是 Realtime Database 規則 Permission denied）');
     });
 }
 btnConnect?.addEventListener('click', doConnect);
-/* Enter 也能連線 */
-byId('space-code')?.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter') doConnect();
-});
+byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doConnect(); });
 
 /* ───────────────── Boot ───────────────── */
 (function boot(){
-  // 初始紅色按鈕（未連線）
+  // 未連線 -> 按鈕紅
   if(!state.space){
     btnConnect?.classList.add('danger');
   }else{
     const input = byId('space-code'); if(input) input.value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
       renderPockets(); renderPayers(); watchRecent(); watchBalances();
-      btnConnect.textContent='連線中';
+      btnConnect.textContent='已連線';
       btnConnect.classList.add('success'); btnConnect.classList.remove('danger');
-    });
+    }).catch(console.error);
   }
   renderPockets(); renderPayers(); renderGroups(); renderItems();
   bindTabs(); bindIOChips(); bindScopeChips();
 })();
-
-let state = {
-  io: 'expense',
-  scope: 'restaurant',
-  payer: 'J',
-  pocket: '餐廳',       // 口袋
-  group: '',            // 類別
-  kind: ''              // 項目
-};
-
-// 支出 / 收入
-bindChipGroup('#chip-io', btn => state.io = btn.dataset.io);
-
-// 用途
-bindChipGroup('#chip-scope', btn => {
-  state.scope = btn.dataset.scope; 
-  renderGroups(); renderItems([]);
-});
-
-// 付款人/收款人（按鈕在 #payers-row 動態生成）
-$('#payers-row').addEventListener('click', e=>{
-  const btn = e.target.closest('button');
-  if(!btn) return;
-  $$('#payers-row button').forEach(b=>b.classList.toggle('active', b===btn));
-  state.payer = btn.dataset.payer;
-});
-// 快取目前 roomRef
-let roomCode = '';
-let roomRef = null;
-
-// 建房/連線（允許匿名登入較穩）
-async function ensureAuth(){
-  try{
-    await firebase.auth().signInAnonymously();
-  }catch(e){}
-}
-
-async function ensureRoom(code){
-  if(!code) throw new Error('no-room-code');
-  await ensureAuth();
-  roomCode = code;
-  roomRef = db.ref(`rooms/${code}`);
-  // 建立必要節點
-  await roomRef.child('catalog').update({ _init:true });
-  return roomRef;
-}
-
-// 監看最近 20 筆
-function watchRecent(){
-  if(!roomRef) return;
-  roomRef.child('records').limitToLast(20).on('value', snap=>{
-    const list = $('#recent-list'); list.innerHTML = '';
-    const val = snap.val() || {};
-    Object.entries(val).reverse().forEach(([id, r])=>{
-      const row = document.createElement('div');
-      row.className = 'row recent';
-      row.innerHTML = `
-        <div class="r-date">${r.date || ''}</div>
-        <div class="r-title">${r.kind || ''}</div>
-        <div class="r-amt ${Number(r.amt)>=0?'pos':'neg'}">${r.amt}</div>`;
-      list.appendChild(row);
-    });
-  });
-}
-
-// 監看口袋餘額
-function watchBalances(){
-  if(!roomRef) return;
-  roomRef.child('balances').on('value', snap=>{
-    const m = snap.val() || {};
-    // 依 pocket 卡片 DOM 更新金額與正負
-    $$('#pockets-row .pocket').forEach(card=>{
-      const name = card.dataset.pocket;
-      const v = Number(m[name]||0);
-      card.querySelector('.amt').textContent = v.toLocaleString();
-      card.classList.toggle('positive', v>=0);
-      card.classList.toggle('negative', v<0);
-    });
-  });
-}
-
-// 送出
-$('#btn-submit').addEventListener('click', async ()=>{
-  if(!roomRef) return alert('請先連線');
-  const amt = Number($('#rec-amt').value||0) * (state.io==='expense' ? -1 : 1);
-  const rec = {
-    io: state.io,
-    scope: state.scope,
-    payer: state.payer,
-    pocket: state.pocket,
-    group: state.group,
-    kind: state.kind,
-    note: $('#rec-note').value || '',
-    amt,
-    date: $('#rec-date').value || new Date().toISOString().slice(0,10),
-    ts: Date.now()
-  };
-  const id = roomRef.child('records').push().key;
-  const updates = {};
-  updates[`records/${id}`] = rec;
-  updates[`balances/${state.pocket}`] = firebase.database.ServerValue.increment(amt);
-  await roomRef.update(updates);
-  $('#rec-note').value=''; $('#rec-amt').value='';
-  // 新增項目自動寫回 catalog
-  if(rec.kind){
-    roomRef.child(`catalog/${state.scope}/${state.group}/${rec.kind}`).set(true);
-  }
-});
-
-// 連線按鈕
-$('#btn-connect').addEventListener('click', async ()=>{
-  const code = ($('#space-code').value || '').trim();
-  if(!code) return alert('請輸入共享代號');
-  try{
-    await ensureRoom(code);
-    watchRecent(); watchBalances();
-    // 成功 → 按鈕改綠
-    const btn = $('#btn-connect');
-    btn.classList.remove('danger'); btn.classList.add('success');
-    btn.textContent = '已連線';
-  }catch(err){
-    console.error(err);
-    alert('連線失敗：' + (err.message||'Permission denied'));
-  }
-});
