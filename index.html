@@ -39,19 +39,15 @@
       <!-- ① 收支 + 金額 + 日期 -->
 <div class="card">
   <div class="top-eqgrid">
-    <div class="chip-group two" id="chip-io" role="group" aria-label="收支類型">
+    <div class="chip-group two" id="chip-io">
       <button class="chip lg pressable" data-io="expense">支出</button>
       <button class="chip lg pressable" data-io="income">收入</button>
     </div>
-
-    <input id="rec-amt" type="number" inputmode="decimal"
-           class="amt elevated center" placeholder="金額" aria-label="金額">
-
-    <div class="date-wrap">
-      <input id="rec-date" type="date" class="elevated" aria-label="日期">
-    </div>
+    <input id="rec-amt" type="number" inputmode="decimal" class="amt elevated" placeholder="金額">
+    <div class="date-wrap"><input id="rec-date" type="date" class="elevated"></div>
   </div>
 </div>
+
 
       <!-- ② 付款口袋 + 付款人/收款人 -->
       <div class="card">
@@ -63,14 +59,13 @@
       </div>
 
       <!-- ③ 用途 / 類別 / 項目 -->
-      <div class="card">
-        <div class="scope-head">
-          <div class="section-head">用途</div>
-          <div class="chip-group wide" id="chip-scope" role="group" aria-label="用途">
-            <button class="chip pressable" data-scope="restaurant">餐廳</button>
-            <button class="chip pressable" data-scope="personal">個人</button>
-          </div>
-        </div>
+<div class="scope-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+  <div class="section-head">用途</div>
+  <div class="chip-group wide" id="chip-scope">
+    <button class="chip pressable" data-scope="restaurant">餐廳</button>
+    <button class="chip pressable" data-scope="personal">個人</button>
+  </div>
+</div>
 
         <div class="section-head">類別</div>
         <div id="group-grid" class="grid grid-2"></div>
