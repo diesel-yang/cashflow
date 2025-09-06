@@ -5,73 +5,67 @@
   <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css?v=4007" />
+  <link rel="stylesheet" href="style.css?v=53" />
 </head>
 <body>
-
-  <!-- 區塊①：系統 title + 分享代號 + 連線 -->
-  <header class="topbar card-plate">
+  <!-- 區塊①：Title + 分享代號 + 連線 -->
+  <header class="topbar block">
     <div class="brand">
       <span class="logo">💨</span>
       <div>
         <div class="brand-name">極速記帳</div>
-        <div class="brand-sub">行動優先 · 高對比</div>
+        <div class="brand-sub">共享記帳 · 餐廳 × 個人</div>
       </div>
     </div>
-
+    <div class="space"></div>
     <div class="connect-row">
-      <input id="space-code" class="input center" placeholder="輸入共享代號…" aria-label="共享代號" />
-      <button id="btn-connect" class="btn danger elevated-3d" aria-label="連線">連線</button>
+      <input id="space-code" class="input" placeholder="輸入共享代號…" aria-label="共享代號" />
+      <button id="btn-connect" class="btn danger pressable" aria-label="連線">連線</button>
     </div>
   </header>
 
   <!-- 區塊②：分頁 -->
-  <nav class="tabs">
-    <button class="tab pressable active" data-target="page-rec">記帳</button>
-    <button class="tab pressable" data-target="page-report">報表</button>
-    <button class="tab pressable" data-target="page-settings">設定</button>
+  <nav class="tabs block" role="tablist" aria-label="頁面">
+    <button class="tab pressable active" data-target="page-rec" role="tab" aria-selected="true">記帳</button>
+    <button class="tab pressable"          data-target="page-report" role="tab">報表</button>
+    <button class="tab pressable"          data-target="page-settings" role="tab">設定</button>
   </nav>
 
   <main>
     <!-- 記帳頁 -->
-    <section id="page-rec" class="page show">
-
-      <!-- 區塊③：支出 / 收入 + 金額 + 日期 -->
-      <div class="card">
-        <div class="row-io">
-          <div class="chip-group two" id="chip-io" role="group" aria-label="收支類型">
+    <section id="page-rec" class="page show" role="tabpanel" aria-label="記帳">
+      <!-- 區塊③：收支 + 金額 + 日期 -->
+      <div class="card block">
+        <div class="top-grid">
+          <div class="chip-group two" id="chip-io" role="group" aria-label="收支">
             <button class="chip lg pressable" data-io="expense">支出</button>
             <button class="chip lg pressable" data-io="income">收入</button>
           </div>
 
-          <input id="rec-amt" type="number" inputmode="decimal"
-                 class="amt elevated-3d center" placeholder="金額" aria-label="金額" />
+          <input id="rec-amt" type="number" inputmode="decimal" class="amt elevated center"
+                 placeholder="金額" aria-label="金額" />
 
-          <div class="date-wrap elevated-3d">
+          <div class="date-wrap">
             <span class="i i-cal" aria-hidden="true">📅</span>
-            <input id="rec-date" type="date" aria-label="日期" />
+            <input id="rec-date" type="date" class="elevated" aria-label="日期" />
           </div>
         </div>
       </div>
 
       <!-- 區塊④：付款口袋（小豬） -->
-      <div class="card">
+      <div class="card block">
         <div class="section-head">付款口袋</div>
-        <div id="pockets-row" class="pockets-grid">
-          <!-- 由 app.js 動態注入 -->
-        </div>
+        <div id="pockets-row" class="pockets"></div>
       </div>
 
       <!-- 區塊⑤：付款人 / 收款人 -->
-      <div class="card">
+      <div class="card block">
         <div class="section-head">付款人 / 收款人</div>
-        <div class="grid grid-3" id="payers-row">
-          <!-- 由 app.js 動態注入 -->
-        </div>
+        <div class="grid grid-3" id="payers-row"></div>
       </div>
 
       <!-- 區塊⑥：用途 / 類別 / 項目 / 備註 / 提交 -->
-      <div class="card">
+      <div class="card block">
         <div class="scope-head">
           <div class="section-head">用途</div>
           <div class="chip-group two wide" id="chip-scope" role="group" aria-label="用途">
@@ -81,51 +75,39 @@
         </div>
 
         <div class="section-head">類別</div>
-        <div id="group-grid" class="grid grid-3 fixed-3">
-          <!-- 一列固定 3 類，由 app.js 注入 -->
-        </div>
+        <div id="group-grid" class="chip-grid group-grid" aria-label="類別"></div>
 
         <div class="section-head">項目</div>
-        <div id="items-grid" class="grid grid-4 fixed-4">
-          <!-- 一列固定 4 項，由 app.js 注入 -->
-        </div>
+        <div id="items-grid" class="chip-grid items" aria-label="項目"></div>
 
-        <!-- 新增項目與送出整合：改由「送出」自動建項目 -->
-        <div class="row row-note">
-          <input id="new-cat-name" class="input" placeholder="新增項目（可在此輸入新名稱，送出時自動建立）" aria-label="新增項目" />
-        </div>
-
-        <div class="row row-note">
+        <div class="row cols-2">
+          <input id="new-cat-name" class="input" placeholder="新增項目（可留空）" aria-label="新增項目" />
           <input id="rec-note" class="input" placeholder="備註（可省略）" aria-label="備註" />
         </div>
 
-        <button id="btn-submit" class="btn primary elevated-3d big-cta pressable">送出</button>
+        <button id="btn-submit" class="btn big elevated primary pressable">送出</button>
       </div>
 
-      <!-- 區塊⑦：近期收支（預設 1 個月） -->
-      <div class="card">
-        <button id="btn-toggle-recent" class="chip box pressable">
-          近期收支（1 個月內） · 點我展開/收合
-        </button>
-        <div id="recent-list" class="list collapsed"></div>
+      <!-- 區塊⑦：近期收支紀錄 -->
+      <div class="card block">
+        <div class="section-head">最近 1 個月（點擊展開）</div>
+        <div id="recent-list" class="list"></div>
       </div>
-
     </section>
 
-    <!-- 報表 -->
-    <section id="page-report" class="page">
+    <!-- 其他頁 -->
+    <section id="page-report" class="page" role="tabpanel" aria-label="報表">
       <div class="card center muted">（報表建置中）</div>
     </section>
 
-    <!-- 設定 -->
-    <section id="page-settings" class="page">
+    <section id="page-settings" class="page" role="tabpanel" aria-label="設定">
       <div class="card center muted">（設定建置中）</div>
     </section>
   </main>
 
-  <footer class="foot">極速記帳 · v3.x</footer>
+  <footer class="foot">極速記帳 · v53</footer>
 
-  <!-- 小豬 symbol -->
+  <!-- 小豬 SVG symbol（可多處 <use>）-->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
     <symbol id="pig-icon" viewBox="0 0 167.18021 139.17355">
       <g transform="translate(-51.916118,27.648844)">
@@ -135,12 +117,9 @@
     </symbol>
   </svg>
 
-  <!-- Firebase（與你現有 app.js 對應） -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script type="module" src="app.js?v=4007"></script>
+  <!-- 僅載入 ES Modules（不要載 compat） -->
+  <script type="module" src="app.js?v=53"></script>
   <script>
-    // PWA
     if ('serviceWorker' in navigator) {
       addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js'));
     }
