@@ -1,4 +1,4 @@
-// app.js v4.0 — 版面/互動統整：連線狀態、三欄不跳行、30天最近、送出寫回與餘額、用途字級、付款人三等分
+// app.js v4.0 → v4.0.1（只改你要求的 5 點；其餘維持 v4.0）
 
 /* Firebase（Compat） */
 const firebaseConfig = {
@@ -94,17 +94,18 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* Pockets */
+/* ===== 口袋：以小豬 SVG 為本體（不再顯示卡片底） ===== */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
+
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
-    <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
-      <svg class="pig" width="88" height="88" viewBox="0 0 167 139" aria-hidden="true">
-        <use href="#pig-icon"></use>
-      </svg>
+    <button class="pocket pig-only" data-pocket="${p.key}" aria-pressed="false">
+      <div class="pig-wrap">
+        <svg class="pig" viewBox="0 0 167 139" aria-hidden="true"><use href="#pig-icon"></use></svg>
+        <div class="amt-badge" id="amt-${p.key}">0</div>
+      </div>
       <div class="name">${p.name}</div>
-      <div class="amt" id="amt-${p.key}">0</div>
     </button>`).join('');
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
@@ -121,20 +122,31 @@ function setActivePocket(key){
     el.setAttribute('aria-pressed', on?'true':'false');
   });
 }
-function updatePocketAmountsFromRecords(records){
-  const bal={restaurant:0,jack:0,wal:0};
-  for(const r of records){
-    const delta=(r.io==='income'?1:-1)*(Number(r.amount||r.amt)||0);
-    if (r.pocket && bal[r.pocket] != null) bal[r.pocket]+=delta;
-  }
-  for(const p of POCKETS){
-    const el=byId(`amt-${p.key}`); if(!el) continue;
-    const v = bal[p.key]||0;
-    el.textContent = (v||0).toLocaleString('zh-TW');
-    const card = el.closest('.pocket');
-    card.classList.toggle('negative', v<0);
-    card.classList.toggle('positive', v>0);
-  }
+function updatePocketAmountsFromAllRecords(){ // 全部紀錄計算（不只本月）
+  const refRec = db.ref(`rooms/${state.space}/records`);
+  refRec.on('value', snap=>{
+    const bal={restaurant:0,jack:0,wal:0};
+    snap.forEach(ch=>{
+      const r = ch.val()||{};
+      const delta=(r.io==='income'?1:-1)*(Number(r.amount||r.amt)||0);
+      if (r.pocket && bal[r.pocket] != null) bal[r.pocket]+=delta;
+    });
+    for(const p of POCKETS){
+      const amtEl=byId(`amt-${p.key}`); if(!amtEl) continue;
+      const v = bal[p.key]||0;
+      amtEl.textContent = v.toLocaleString('zh-TW');
+      const card = amtEl.closest('.pocket');
+      card.classList.toggle('negative', v<0);
+      card.classList.toggle('positive', v>0);
+      // 用 currentColor 改變小豬顏色
+      const pig = card.querySelector('.pig');
+      if(pig){
+        if(v>0) pig.style.color = getComputedStyle(document.documentElement).getPropertyValue('--pos') || '#76e3a8';
+        else if(v<0) pig.style.color = getComputedStyle(document.documentElement).getPropertyValue('--neg') || '#ff9aa0';
+        else pig.style.color = '#93a2ad';
+      }
+    }
+  });
 }
 
 /* Payers (3 等分：J / W / JW) */
@@ -203,21 +215,30 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* 最近（30 天）與餘額監看 */
-function watchRecentAndBalances(){
+/* ===== 本月紀錄（依 date；需 .indexOn:["date"]） ===== */
+function monthBoundsISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth()+1;
+  const mm = String(m).padStart(2,'0');
+  const first = `${y}-${mm}-01`;
+  // 取月底：下月1日-1天
+  const lastDay = new Date(y, m, 0).getDate();
+  const last = `${y}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  return {first,last};
+}
+function watchMonthlyRecent(){
   const list = byId('recent-list'); if(!list) return;
-  const refRec = db.ref(`rooms/${state.space}/records`);
-  refRec.on('value', snap=>{
-    const now = Date.now();
-    const since = now - 30*24*60*60*1000;
-    const arr=[];
-    snap.forEach(ch=>{
-      const v = ch.val();
-      arr.push(v);
-    });
-    // 最近 30 天呈現
-    const rows = arr.filter(r=>(r.ts||0)>=since).sort((a,b)=>b.ts-a.ts);
-    list.innerHTML = rows.map(r=>{
+  const {first,last} = monthBoundsISO();
+  const q = db.ref(`rooms/${state.space}/records`)
+              .orderByChild('date')
+              .startAt(first)
+              .endAt(last);
+  q.on('value', snap=>{
+    const arr = [];
+    snap.forEach(ch=>arr.push(ch.val()));
+    arr.sort((a,b)=> (b.ts||0) - (a.ts||0));
+    list.innerHTML = arr.map(r=>{
       const sign = r.io==='expense'?'-':'+';
       const d = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
       return `<div class="row">
@@ -225,9 +246,7 @@ function watchRecentAndBalances(){
         <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group}${r.item? '・'+r.item:''}</div>
         <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
       </div>`;
-    }).join('') || `<div class="muted">（近 30 天無紀錄）</div>`;
-    // 餘額依全部紀錄累計
-    updatePocketAmountsFromRecords(arr);
+    }).join('') || `<div class="muted">（本月無紀錄）</div>`;
   });
 }
 
@@ -318,7 +337,8 @@ function doConnect(){
     .then(ensureCatalog)
     .then(()=>{
       renderPockets(); renderPayers();
-      watchRecentAndBalances();
+      watchMonthlyRecent();       // ← 改為「本月」監看
+      updatePocketAmountsFromAllRecords(); // ← 餘額仍看「全部紀錄」
       btnConnect.textContent='連線中';
       btnConnect.classList.add('success');
       btnConnect.classList.remove('danger');
@@ -343,7 +363,8 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
     byId('space-code').value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
       renderPockets(); renderPayers();
-      watchRecentAndBalances();
+      watchMonthlyRecent();
+      updatePocketAmountsFromAllRecords();
       btnConnect.textContent='連線中';
       btnConnect.classList.add('success');
       btnConnect.classList.remove('danger');
