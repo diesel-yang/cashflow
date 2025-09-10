@@ -1,34 +1,156 @@
 /* ==========================================================================
-   v4.1：等寬三欄、不跳行；送出立體；用途字級調整；口袋小豬 2x。
+   極速記帳 - 高對比深色（mobile-first）
+   v4.0：等寬三欄、不跳行；送出立體；用途字級調整；口袋小豬 2x。
    ========================================================================== */
 
 :root{
-  --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
-  --primary:#12b4c4; --primary-weak:#0f8f9b; --accent:#12b4c4;
-  --border:#203033; --chip-bg:#0f1719; --chip-active:#0f2f35;
-  --pos:#76e3a8; --neg:#ff9aa0;
+  --bg:#0a0f11;
+  --card:#10191c;
+  --text:#f3fbfd;
+  --muted:#a8c0c7;
+  --primary:#12b4c4;
+  --border:#203033;
+  --chip-bg:#0f1719;
+  --chip-active:#0f2f35;
+  --pos:#76e3a8;
+  --neg:#ff9aa0;
 }
-body{margin:0;font-family:-apple-system,'Noto Sans TC';background:var(--bg);color:var(--text);}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;display:grid;gap:12px;margin:8px 0;}
-.section-head{font-weight:700;font-size:14px}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial}
+
+/* 基本卡片 */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:12px;display:grid;gap:12px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
+  margin:8px 12px;
+}
+.section-head{font-size:15px;font-weight:800;letter-spacing:.04em}
+.center{display:grid;place-items:center}
+.muted{color:var(--muted)}
+.space{flex:1}
+
+/* 頂部 */
+.head .head-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
 .tabs{display:flex;gap:8px}
-.tab{flex:1;text-align:center;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--chip-bg)}
-.tab.active{border-color:var(--primary);background:var(--chip-active);font-weight:800}
-.top-eqgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center}
-.chip-group.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.chip{display:flex;align-items:center;justify-content:center;padding:10px;border-radius:12px;background:var(--chip-bg);border:1px solid var(--border)}
-.chip.active{background:var(--chip-active);border-color:var(--primary);font-weight:800}
-.amt{font-size:20px;font-weight:800;text-align:center;color:var(--text)}
-.date-wrap input{width:100%;text-align:center;font-weight:800;font-size:18px}
-#pockets-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center}
-.pocket{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border:1px solid var(--border);border-radius:16px}
+.tab{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
+  padding:9px 13px;border-radius:999px;cursor:pointer
+}
+.tab.active{background:var(--chip-active);border-color:var(--primary);font-weight:800}
+
+/* Inputs / Buttons */
+.input{
+  width:100%;background:var(--chip-bg);color:var(--text);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+}
+.btn{background:var(--primary);color:#001114;border:none;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer}
+.btn.danger{background:#dc3545;color:#fff}
+.btn.success{background:#2ac3a2;color:#001114}
+
+/* Chips */
+.chip{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
+  border-radius:12px;padding:10px 12px;min-height:48px;
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px
+}
+.chip.active{background:var(--chip-active);border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent)}
+.chip.lg{font-size:18px}
+#chip-scope .chip{font-size:18px} /* 用途字級與類別一致 */
+
+/* ===== 修正：頂部等寬三欄（支出/收入｜金額｜日期）不跳行 ===== */
+.top-eqgrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap:12px;
+  align-items:center;
+}
+/* 兩顆 chip 等分該欄寬 */
+.chip-group.two{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+
+/* 金額輸入：深色主題下強制白字、游標色，並統一大小 */
+#rec-amt.amt{
+  text-align:center;
+  font-weight:900;
+  font-size:20px;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
+}
+
+/* iOS/Chrome 自動填入的字色也拉正 */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text) !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* 日期輸入：維持「立體」視覺、字級與金額一致且不撐破欄位 */
+.elevated{
+  border-radius:12px;border:1px solid var(--border);
+  background:linear-gradient(#0e1619,#0b1215);color:var(--text);padding:12px 14px;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25);
+}
+.date-wrap input[type="date"]{
+  width:100%;text-align:center;font-weight:800;font-size:18px;min-width:0;
+}
+
+/* 送出按鈕：立體卡片（和日期一致） */
+.btn-3d{
+  appearance:none;width:100%;
+  border:1px solid #1c2a2e;border-radius:14px;padding:14px 18px;
+  font-weight:900;letter-spacing:.08em;text-align:center;cursor:pointer;
+  background:linear-gradient(#0e1619,#0b1215);color:#e8f7fa;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 10px 24px rgba(0,0,0,.35),0 0 0 2px rgba(18,180,196,.20);
+  transition:transform .06s ease,box-shadow .15s ease,filter .15s ease;
+}
+.btn-3d.primary{background:linear-gradient(#13bfd0,#109fb0);border-color:#0f8f9b;color:#001114}
+.btn-3d:hover{filter:brightness(1.03)}
+.btn-3d:active{transform:translateY(1px);box-shadow:0 6px 16px rgba(0,0,0,.28),0 0 0 2px rgba(18,180,196,.25)}
+.btn-3d:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* Grids */
+.grid{display:grid;gap:10px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.pockets-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* 口袋 */
+.pocket{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;
+  border:1px solid var(--border);background:var(--card);border-radius:16px;padding:12px;min-height:160px;cursor:pointer
+}
+.pocket.active{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent)}
 .pocket .pig{width:88px;height:88px}
 .pocket .name{font-size:15px;color:var(--muted)}
-.pocket .amt{font-size:20px;font-weight:800}
-.list .row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center}
-.list .r-amt.pos{color:var(--pos)} .list .r-amt.neg{color:var(--neg)}
-.btn-3d{width:100%;padding:14px;border-radius:14px;font-weight:800;background:linear-gradient(#13bfd0,#109fb0);border:1px solid #0f8f9b;color:#001114}
-@media(max-width:480px){
-  .top-eqgrid{grid-template-columns:1fr 1fr 1fr}
-  #items-grid{grid-template-columns:repeat(2,1fr)}
+.pocket .amt{font-size:22px;font-weight:900;color:var(--text)}
+.pocket.negative .pig{color:#ff6b6b}
+.pocket.negative .amt{color:var(--neg)}
+.pocket.positive .amt{color:var(--pos)}
+
+/* 最近列表（白字） */
+.list{display:grid;gap:8px}
+.list .row{
+  display:grid;grid-template-columns:95px 1fr auto;gap:8px;align-items:center;
+  padding:10px;background:var(--chip-bg);border:1px solid var(--border);border-radius:12px;color:var(--text)
 }
+.list .r-date{color:var(--muted)}
+.list .r-amt{font-weight:900}
+.list .r-amt.pos{color:var(--pos)}
+.list .r-amt.neg{color:var(--neg)}
+
+/* 小螢幕微縮字，不改三欄排版 */
+@media (max-width:360px){
+  #rec-amt.amt{font-size:18px}
+  .date-wrap input[type="date"]{font-size:16px}
+  .chip.lg,#chip-scope .chip{font-size:16px}
+}
+
+/* 可用性 */
+:where(button,.chip,.pocket,input):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
