@@ -1,4 +1,4 @@
-// app.js v4.02 — 熱修：三欄穩定、口袋=SVG（內嵌金額）、日期預設今日、分頁可切換、P&L/圖表
+// app.js v4.02 — 熱修：流體排版、三欄穩定、SVG=口袋（外框高亮）、日期預設今日、分頁、P&L+圓餅圖
 /* Firebase（Compat） */
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
@@ -88,7 +88,7 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* 付款口袋（小豬=卡片主體、金額內嵌） */
+/* 付款口袋（SVG = 卡片；金額內嵌） */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
@@ -219,7 +219,7 @@ function watchRecentAndBalances(){
     // 餘額依全部紀錄累計
     updatePocketAmountsFromRecords(arr);
 
-    // 更新報表 & 圖表
+    // 更新報表 & 圓餅圖
     renderReports();
   });
 }
@@ -273,7 +273,6 @@ function bindTabs(){
       $$('.page').forEach(p=>p.classList.remove('show'));
       const id = tab.getAttribute('data-target');
       byId(id)?.classList.add('show');
-      // 切到報表頁時重畫一次（避免 canvas 尺寸或捲動影響）
       if(id==='page-biz' || id==='page-personal' || id==='page-budget'){ renderReports(); }
     });
   });
@@ -325,14 +324,12 @@ function doConnect(){
 btnConnect?.addEventListener('click', doConnect);
 byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doConnect(); });
 
-/* ===== 報表與圖表 ===== */
+/* ===== 報表與圓餅圖 ===== */
 function currentMonthPrefix(){
   const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function sum(arr){ return arr.reduce((a,b)=>a+(Number(b)||0),0); }
-function filterMonth(records, ym){
-  return records.filter(r => (r.date||'').startsWith(ym));
-}
+function filterMonth(records, ym){ return records.filter(r => (r.date||'').startsWith(ym)); }
 function groupSumBy(records, key){
   const m=new Map();
   for(const r of records){
@@ -342,13 +339,9 @@ function groupSumBy(records, key){
   return m;
 }
 function buildBizPL(monthRecs){
-  // 餐廳（scope='restaurant'）
   const rs = monthRecs.filter(r=>r.scope==='restaurant');
   const income = rs.filter(r=>r.io==='income' && (r.group==='營業收入' || r.group==='' ));
-  const expenses = rs.filter(r=>r.io==='expense');
-
-  const byGroup = new Map();
-  for(const g of REST_GROUPS){ byGroup.set(g,0); }
+  const byGroup = new Map(); for(const g of REST_GROUPS){ byGroup.set(g,0); }
   for(const r of rs){
     const g = r.group || (r.io==='income'?'營業收入':'其他');
     const val = (Number(r.amount||r.amt)||0) * (r.io==='expense'?-1:1);
@@ -361,76 +354,53 @@ function buildBizPL(monthRecs){
   const opex = Math.abs( opexGroups.reduce((t,g)=> t + (byGroup.get(g)||0), 0) );
   const grossProfit = revenue - cogs;
   const operatingProfit = grossProfit - opex;
-
   return {byGroup, revenue, cogs, opex, grossProfit, operatingProfit};
 }
 function buildPersonalPL(monthRecs){
   const ps = monthRecs.filter(r=>r.scope==='personal');
   const income = ps.filter(r=>r.io==='income');
   const expense = ps.filter(r=>r.io==='expense');
-
   const byIncome = groupSumBy(income,'group'); // 正值
-  const byExpense = groupSumBy(expense,'group'); // 負值（我們取絕對值顯示）
+  const byExpense = groupSumBy(expense,'group'); // 負值（顯示取絕對值）
   const incomeTotal = sum(income.map(x=>Number(x.amount||x.amt)||0));
   const expenseTotal = sum(expense.map(x=>Number(x.amount||x.amt)||0));
   const net = incomeTotal - expenseTotal;
   return {byIncome, byExpense, incomeTotal, expenseTotal, net};
 }
 
-/* 繪製簡易柱狀圖（原生 canvas，無外掛） */
-function drawBarChart(canvas, labels, values){
+/* 原生 canvas 圓餅圖（不指定色票，由瀏覽器預設） */
+function drawPie(canvas, labels, values){
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = Math.min(W,H)*0.36;
+
+  const total = values.reduce((a,b)=>a+(Number(b)||0),0) || 1;
   ctx.clearRect(0,0,W,H);
 
-  const padding = 40;
-  const chartW = W - padding*2;
-  const chartH = H - padding*2;
+  let start = -Math.PI/2;
+  for(let i=0;i<values.length;i++){
+    const v = Number(values[i])||0; if(v<=0) continue;
+    const ang = (v/total) * Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+ang);
+    ctx.closePath();
+    ctx.fill(); // 使用預設顏色
+    start += ang;
+  }
 
-  const maxV = Math.max(1, ...values.map(v=>Math.abs(v)));
-  const barW = Math.max(8, chartW / Math.max(1, labels.length) * 0.7);
-  const gap = (chartW - barW*labels.length) / Math.max(1,(labels.length-1));
-
-  ctx.fillStyle = '#e6eef0';
-  ctx.font = '12px system-ui';
-
-  // axes
-  ctx.globalAlpha = .6;
-  ctx.beginPath();
-  ctx.moveTo(padding, H-padding); ctx.lineTo(W-padding, H-padding);
-  ctx.moveTo(padding, padding); ctx.lineTo(padding, H-padding);
-  ctx.strokeStyle = '#2b3a3d'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // bars
-  let x = padding;
+  // 標籤
+  ctx.fillStyle = '#e6eef0'; ctx.font = '12px system-ui';
+  let y = 20;
   for(let i=0;i<labels.length;i++){
-    const v = Math.max(0, values[i]);
-    const h = (v/maxV)* (chartH-10);
-    const y = H - padding - h;
-
-    // bar (不指定顏色，使用預設 fillStyle)
-    ctx.fillRect(x, y, barW, h);
-
-    // label
-    const txt = labels[i];
-    const tw = ctx.measureText(txt).width;
-    ctx.save();
-    ctx.globalAlpha = .85;
-    ctx.fillText(txt, x + barW/2 - tw/2, H - padding + 14);
-    ctx.restore();
-
-    // value
-    const valStr = (Math.round(v)).toLocaleString('zh-TW');
-    const vw = ctx.measureText(valStr).width;
-    ctx.fillText(valStr, x + barW/2 - vw/2, y - 6);
-
-    x += barW + gap;
+    ctx.fillRect(20,y-9,12,12); // 小色塊（同 fillStyle，簡化：不換色）
+    ctx.fillText(`${labels[i]}  ${Math.round(values[i]||0).toLocaleString('zh-TW')}`, 40, y+1);
+    y += 18;
   }
 }
 
-/* 渲染表格 */
+/* 表格渲染 */
 function renderPLTable(host, rows){
   if(!host) return;
   host.innerHTML = `
@@ -451,7 +421,7 @@ function renderPLTable(host, rows){
   `;
 }
 
-/* 主渲染：報表與圖表（本月） */
+/* 主渲染：報表與圓餅圖（本月） */
 function renderReports(){
   const ym = currentMonthPrefix();
   const monthRecs = filterMonth(allRecordsCache, ym);
@@ -471,10 +441,10 @@ function renderReports(){
   ];
   renderPLTable(byId('biz-pl'), bizRows);
 
-  // 餐廳支出圖（排除營業收入與 COGS，只看營運費用）
+  // 餐廳支出圓餅：只看 OPEX 群組
   const opexLabels = ['人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
   const opexValues = opexLabels.map(g => Math.abs(biz.byGroup.get(g)||0));
-  drawBarChart(byId('biz-chart'), opexLabels, opexValues);
+  drawPie(byId('biz-pie'), opexLabels, opexValues);
 
   // 個人
   const per = buildPersonalPL(monthRecs);
@@ -487,12 +457,12 @@ function renderReports(){
   ];
   renderPLTable(byId('pers-pl'), perRows);
 
-  // 個人支出圖
+  // 個人支出圓餅
   const expLabels = PERS_EXPENSE_GROUPS;
   const expValues = expLabels.map(g => Math.abs(per.byExpense.get(g)||0));
-  drawBarChart(byId('pers-chart'), expLabels, expValues);
+  drawPie(byId('pers-pie'), expLabels, expValues);
 
-  // 預算頁快覽（以實際數據先顯示）
+  // 預算頁快覽
   const budgetRows = [
     {label:'餐廳：營業收入（本月）', value: biz.revenue, class:'total'},
     {label:'餐廳：營運費用合計（本月）', value: -biz.opex},
@@ -506,11 +476,9 @@ function renderReports(){
 
 /* Boot */
 (function boot(){
-  // 日期預設今天
   const dateInput = byId('rec-date');
   if (dateInput && !dateInput.value) dateInput.value = todayISO();
 
-  // 還原空間
   if(state.space){
     byId('space-code').value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
@@ -523,8 +491,9 @@ function renderReports(){
   }else{
     btnConnect?.classList.add('danger');
     btnConnect.textContent='未連線';
+    renderPockets(); renderPayers(); // 未連線也先渲染 UI
   }
 
-  renderPockets(); renderPayers(); renderGroups(); renderItems();
+  renderGroups(); renderItems();
   bindTabs(); bindIOChips(); bindScopeChips();
 })();
