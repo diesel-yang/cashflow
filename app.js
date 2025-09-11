@@ -1,4 +1,4 @@
-// app.js v4.0 → v4.0.1（只改你要求的 5 點；其餘維持 v4.0）
+// app.js v4.01 + Reports/Budget
 
 /* Firebase（Compat） */
 const firebaseConfig = {
@@ -19,11 +19,20 @@ const $  = (s, el=document)=>el.querySelector(s);
 const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
 const byId = id=>document.getElementById(id);
 const money = n => (Number(n)||0).toLocaleString('zh-TW');
+
 function todayISO(){
   const d = new Date();
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const dd = String(d.getDate()).padStart(2,'0');
   return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function monthRangeISO(d=new Date()){
+  const y = d.getFullYear(), m = d.getMonth();
+  const start = new Date(y, m, 1);
+  const end   = new Date(y, m+1, 0);
+  const s = `${y}-${String(m+1).padStart(2,'0')}-01`;
+  const e = `${y}-${String(m+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+  return {startISO:s, endISO:e};
 }
 
 /* State */
@@ -36,7 +45,10 @@ const state = {
   payer: "J",
   pocket: "restaurant",
   catalog: [],
-  catalogIndex: null
+  catalogIndex: null,
+  // report/budget scopes
+  rscope: "restaurant",
+  bscope: "restaurant"
 };
 
 /* Groups / Icons */
@@ -94,18 +106,17 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* ===== 口袋：以小豬 SVG 為本體（不再顯示卡片底） ===== */
+/* Pockets */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
-
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
-    <button class="pocket pig-only" data-pocket="${p.key}" aria-pressed="false">
-      <div class="pig-wrap">
-        <svg class="pig" viewBox="0 0 167 139" aria-hidden="true"><use href="#pig-icon"></use></svg>
-        <div class="amt-badge" id="amt-${p.key}">0</div>
-      </div>
+    <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
+      <svg class="pig" width="88" height="88" viewBox="0 0 167 139" aria-hidden="true">
+        <use href="#pig-icon"></use>
+      </svg>
       <div class="name">${p.name}</div>
+      <div class="amt" id="amt-${p.key}">0</div>
     </button>`).join('');
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
@@ -122,31 +133,20 @@ function setActivePocket(key){
     el.setAttribute('aria-pressed', on?'true':'false');
   });
 }
-function updatePocketAmountsFromAllRecords(){ // 全部紀錄計算（不只本月）
-  const refRec = db.ref(`rooms/${state.space}/records`);
-  refRec.on('value', snap=>{
-    const bal={restaurant:0,jack:0,wal:0};
-    snap.forEach(ch=>{
-      const r = ch.val()||{};
-      const delta=(r.io==='income'?1:-1)*(Number(r.amount||r.amt)||0);
-      if (r.pocket && bal[r.pocket] != null) bal[r.pocket]+=delta;
-    });
-    for(const p of POCKETS){
-      const amtEl=byId(`amt-${p.key}`); if(!amtEl) continue;
-      const v = bal[p.key]||0;
-      amtEl.textContent = v.toLocaleString('zh-TW');
-      const card = amtEl.closest('.pocket');
-      card.classList.toggle('negative', v<0);
-      card.classList.toggle('positive', v>0);
-      // 用 currentColor 改變小豬顏色
-      const pig = card.querySelector('.pig');
-      if(pig){
-        if(v>0) pig.style.color = getComputedStyle(document.documentElement).getPropertyValue('--pos') || '#76e3a8';
-        else if(v<0) pig.style.color = getComputedStyle(document.documentElement).getPropertyValue('--neg') || '#ff9aa0';
-        else pig.style.color = '#93a2ad';
-      }
-    }
-  });
+function updatePocketAmountsFromRecords(records){
+  const bal={restaurant:0,jack:0,wal:0};
+  for(const r of records){
+    const delta=(r.io==='income'?1:-1)*(Number(r.amount||r.amt)||0);
+    if (r.pocket && bal[r.pocket] != null) bal[r.pocket]+=delta;
+  }
+  for(const p of POCKETS){
+    const el=byId(`amt-${p.key}`); if(!el) continue;
+    const v = bal[p.key]||0;
+    el.textContent = (v||0).toLocaleString('zh-TW');
+    const card = el.closest('.pocket');
+    card.classList.toggle('negative', v<0);
+    card.classList.toggle('positive', v>0);
+  }
 }
 
 /* Payers (3 等分：J / W / JW) */
@@ -215,41 +215,6 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* ===== 本月紀錄（依 date；需 .indexOn:["date"]） ===== */
-function monthBoundsISO(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = d.getMonth()+1;
-  const mm = String(m).padStart(2,'0');
-  const first = `${y}-${mm}-01`;
-  // 取月底：下月1日-1天
-  const lastDay = new Date(y, m, 0).getDate();
-  const last = `${y}-${mm}-${String(lastDay).padStart(2,'0')}`;
-  return {first,last};
-}
-function watchMonthlyRecent(){
-  const list = byId('recent-list'); if(!list) return;
-  const {first,last} = monthBoundsISO();
-  const q = db.ref(`rooms/${state.space}/records`)
-              .orderByChild('date')
-              .startAt(first)
-              .endAt(last);
-  q.on('value', snap=>{
-    const arr = [];
-    snap.forEach(ch=>arr.push(ch.val()));
-    arr.sort((a,b)=> (b.ts||0) - (a.ts||0));
-    list.innerHTML = arr.map(r=>{
-      const sign = r.io==='expense'?'-':'+';
-      const d = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
-      return `<div class="row">
-        <div class="r-date">${d}</div>
-        <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group}${r.item? '・'+r.item:''}</div>
-        <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
-      </div>`;
-    }).join('') || `<div class="muted">（本月無紀錄）</div>`;
-  });
-}
-
 /* 送出 */
 byId('btn-submit')?.addEventListener('click', onSubmit);
 async function onSubmit(){
@@ -288,19 +253,174 @@ async function onSubmit(){
   );
   await room.update(updates);
 
-  // 清空輸入
   byId('rec-amt').value=''; byId('rec-note').value='';
 }
+
+/* 本月紀錄 + 餘額（用 date 索引） */
+function watchMonthAndBalances(){
+  const list = byId('recent-list'); if(!list) return;
+  const {startISO, endISO} = monthRangeISO(new Date());
+  const recRef = db.ref(`rooms/${state.space}/records`).orderByChild('date').startAt(startISO).endAt(endISO);
+
+  recRef.on('value', snap=>{
+    const arr=[];
+    snap.forEach(ch=>arr.push(ch.val()));
+    arr.sort((a,b)=> (b.date||'') < (a.date||'') ? -1 : 1);
+
+    list.innerHTML = arr.map(r=>{
+      const sign = r.io==='expense'?'-':'+';
+      const d = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
+      return `<div class="row">
+        <div class="r-date">${d}</div>
+        <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group}${r.item? '・'+r.item:''}</div>
+        <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
+      </div>`;
+    }).join('') || `<div class="muted">（本月尚無紀錄）</div>`;
+
+    // 餘額用「全部歷史」會較準確；若只要本月可改用 arr
+    const allRef = db.ref(`rooms/${state.space}/records`);
+    allRef.once('value').then(s=>{
+      const all=[]; s.forEach(c=>all.push(c.val()));
+      updatePocketAmountsFromRecords(all);
+    });
+  });
+}
+
+/* 報表（本月） */
+let pieChart = null;
+async function renderReport(){
+  if(!state.space) return;
+  const {startISO,endISO} = monthRangeISO(new Date());
+  const refQ = db.ref(`rooms/${state.space}/records`).orderByChild('date').startAt(startISO).endAt(endISO);
+  const snap = await refQ.get();
+  const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
+
+  // 篩選範圍
+  let rows = [];
+  if(state.rscope==='restaurant'){
+    rows = arr.filter(r=>r.scope==='restaurant');
+  }else if(state.rscope==='jack'){
+    rows = arr.filter(r=> (r.pocket==='jack'));
+  }else{
+    rows = arr.filter(r=> (r.pocket==='wal'));
+  }
+
+  // KPI
+  let inc=0, exp=0;
+  rows.forEach(r=>{
+    const v = Number(r.amount||0);
+    if(r.io==='income') inc += v; else exp += v;
+  });
+  const net = inc - exp;
+  byId('r-inc').textContent = money(inc);
+  byId('r-exp').textContent = money(exp);
+  byId('r-net').textContent = money(net);
+  byId('r-net').classList.toggle('pos', net>0);
+  byId('r-net').classList.toggle('neg', net<0);
+
+  // 圓餅：以「支出」依類別彙總
+  const sumByKind = {};
+  rows.filter(r=>r.io==='expense').forEach(r=>{
+    const k = r.group || '未分類';
+    sumByKind[k] = (sumByKind[k]||0) + Number(r.amount||0);
+  });
+  const labels = Object.keys(sumByKind);
+  const data   = labels.map(k=>sumByKind[k]);
+
+  // 表格
+  const tb = byId('report-tbody');
+  tb.innerHTML = labels.map(k=>`<tr><td>${k}</td><td class="tr">${money(sumByKind[k])}</td></tr>`).join('') || `<tr><td colspan="2" class="muted">（本月尚無支出）</td></tr>`;
+  byId('report-sum').textContent = money(data.reduce((a,b)=>a+b,0));
+
+  // 畫圓餅
+  const ctx = byId('pie-chart').getContext('2d');
+  if(pieChart){ pieChart.destroy(); }
+  pieChart = new Chart(ctx, {
+    type:'pie',
+    data:{ labels, datasets:[{ data }]},
+    options:{ plugins:{ legend:{ position:'bottom', labels:{ color:'#dff5f9' } } } }
+  });
+}
+
+/* 預算頁 */
+function ymKey(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function budgetGroups(scope){
+  return (scope==='restaurant') ? REST_GROUPS.filter(g=>g!=='營業收入') : PERS_EXPENSE_GROUPS;
+}
+async function renderBudget(){
+  if(!state.space) return;
+  const month = ymKey(new Date());
+  byId('bud-month-label').textContent = `月份：${month}`;
+
+  const groups = budgetGroups(state.bscope);
+  const wrap = byId('budget-list');
+  wrap.innerHTML = groups.map(g=>`
+    <div class="bud-row" data-group="${g}">
+      <div class="label"><span class="emoji">${GROUP_ICON_MAP[g]||''}</span>${g}</div>
+      <input class="in-budget" type="number" placeholder="預算">
+      <div class="progress"><i></i></div>
+    </div>
+  `).join('');
+
+  // 載入既有預算
+  const budRef = db.ref(`rooms/${state.space}/budgets/${state.bscope}/${month}`);
+  const recRef = db.ref(`rooms/${state.space}/records`).orderByChild('date')
+                    .startAt(monthRangeISO().startISO).endAt(monthRangeISO().endISO);
+
+  const [budSnap, recSnap] = await Promise.all([budRef.get(), recRef.get()]);
+  const bud = budSnap.exists()? budSnap.val() : {};
+  const rows=[]; recSnap.forEach(ch=>rows.push(ch.val()));
+
+  // 計算本月該 scope 支出
+  const spendBy = {};
+  rows.filter(r=>{
+    if(state.bscope==='restaurant') return r.scope==='restaurant' && r.io==='expense';
+    if(state.bscope==='jack')       return r.pocket==='jack' && r.io==='expense';
+    return r.pocket==='wal' && r.io==='expense';
+  }).forEach(r=>{
+    const k=r.group||'未分類';
+    spendBy[k]=(spendBy[k]||0)+Number(r.amount||0);
+  });
+
+  // 回填
+  $$('.bud-row').forEach(row=>{
+    const g = row.dataset.group;
+    const input = row.querySelector('.in-budget');
+    const prog  = row.querySelector('.progress > i');
+    input.value = bud[g]||'';
+    const val = Number(spendBy[g]||0);
+    const cap = Math.max(0, Number(input.value||0));
+    const pct = cap ? Math.min(100, Math.round(val/cap*100)) : 0;
+    prog.style.width = pct+'%';
+  });
+}
+
+// 儲存預算
+byId('btn-save-budget')?.addEventListener('click', async ()=>{
+  if(!state.space) return alert('請先連線');
+  const month = ymKey(new Date());
+  const payload = {};
+  $$('.bud-row').forEach(row=>{
+    const g = row.dataset.group;
+    const v = Number(row.querySelector('.in-budget').value||0);
+    if(v>0) payload[g]=v;
+  });
+  await db.ref(`rooms/${state.space}/budgets/${state.bscope}/${month}`).set(payload);
+  alert('已儲存預算');
+});
 
 /* Tabs / IO / Scope */
 function bindTabs(){
   $$('.tab').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
+    tab.addEventListener('click', async ()=>{
       $$('.tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
       $$('.page').forEach(p=>p.classList.remove('show'));
       const id = tab.getAttribute('data-target');
       byId(id)?.classList.add('show');
+
+      if(id==='page-report') await renderReport();
+      if(id==='page-budget') await renderBudget();
     });
   });
 }
@@ -325,6 +445,21 @@ function bindScopeChips(){
     renderGroups(); renderItems();
   });
 }
+// 報表/預算 scope chips
+byId('report-scope')?.addEventListener('click', async e=>{
+  const btn = e.target.closest('[data-rscope]'); if(!btn) return;
+  $$('#report-scope .chip').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  state.rscope = btn.dataset.rscope;
+  await renderReport();
+});
+byId('budget-scope')?.addEventListener('click', async e=>{
+  const btn = e.target.closest('[data-bscope]'); if(!btn) return;
+  $$('#budget-scope .chip').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  state.bscope = btn.dataset.bscope;
+  await renderBudget();
+});
 
 /* 連線 */
 const btnConnect = byId('btn-connect');
@@ -337,12 +472,13 @@ function doConnect(){
     .then(ensureCatalog)
     .then(()=>{
       renderPockets(); renderPayers();
-      watchMonthlyRecent();       // ← 改為「本月」監看
-      updatePocketAmountsFromAllRecords(); // ← 餘額仍看「全部紀錄」
+      watchMonthAndBalances();
       btnConnect.textContent='連線中';
       btnConnect.classList.add('success');
       btnConnect.classList.remove('danger');
       localStorage.setItem('CF_SPACE',state.space);
+      // 初始載入報表/預算
+      renderReport(); renderBudget();
     })
     .catch(err=>{
       console.error(err);
@@ -358,16 +494,15 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
   const dateInput = byId('rec-date');
   if (dateInput && !dateInput.value) dateInput.value = todayISO();
 
-  // 還原空間
   if(state.space){
     byId('space-code').value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
       renderPockets(); renderPayers();
-      watchMonthlyRecent();
-      updatePocketAmountsFromAllRecords();
+      watchMonthAndBalances();
       btnConnect.textContent='連線中';
       btnConnect.classList.add('success');
       btnConnect.classList.remove('danger');
+      renderReport(); renderBudget();
     });
   }else{
     btnConnect?.classList.add('danger');
