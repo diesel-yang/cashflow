@@ -1,5 +1,5 @@
 /* ==========================================================================
-   極速記帳 - v4.02 熱修：三欄不跳行＋小豬即口袋卡片（內嵌金額）
+   極速記帳 - v4.02 熱修：三欄不跳行＋小豬即口袋卡片（內嵌金額）＋ P&L 樣式
    ========================================================================== */
 :root{
   --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
@@ -22,7 +22,6 @@ main{padding-bottom:40px}
 .section-head{font-size:15px; font-weight:800; letter-spacing:.04em}
 .center{display:grid;place-items:center}
 .muted{color:var(--muted)}
-.foot{color:var(--muted); text-align:center; padding:12px}
 
 /* 頂部 */
 .head .head-row{
@@ -113,7 +112,7 @@ main{padding-bottom:40px}
 .pocket .pig{ width:120px; height:120px; color:#6aa7ff; }
 .pocket .pig use{ pointer-events:none }
 .pocket .name{ font-size:15px; color:var(--muted); }
-.pocket .badge{ /* 內嵌金額（使用絕對定位疊在小豬身體上） */
+.pocket .badge{ /* 內嵌金額 */
   position:absolute; top:48%; left:50%; transform:translate(-50%,-50%);
   font-size:20px; font-weight:900; color:var(--text); padding:.15em .5em;
   background:#0b1215; border:1px solid #1c2a2e; border-radius:10px;
@@ -123,7 +122,7 @@ main{padding-bottom:40px}
 .pocket.negative .pig{ color:#ff6b6b }
 .pocket.negative .badge{ color:var(--neg) }
 .pocket.positive .badge{ color:var(--pos) }
-/* 讓 SVG 受色彩控制並在高亮時更明顯（補 stroke-linejoin / -cap） */
+/* 讓 SVG 受色彩控制並在高亮時更明顯 */
 .pocket .pig path{ fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round }
 
 /* 最近列表 */
@@ -141,26 +140,24 @@ main{padding-bottom:40px}
 .page{display:none}
 .page.show{display:block}
 
-/* ===== P&L / 小條圖（無外掛） ===== */
-.table{display:grid; gap:6px}
-.table .trow{
-  display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
-  padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--chip-bg);
+/* P&L 表格 */
+.pl-table{
+  overflow:auto; border:1px solid var(--border); border-radius:12px;
 }
-.table .trow.total{font-weight:900; border-color:var(--primary)}
-.table .trow.dim{color:var(--muted)}
-.table .amt.pos{color:var(--pos); font-weight:900}
-.table .amt.neg{color:var(--neg); font-weight:900}
-
-.bars{display:grid; gap:8px}
-.bar{
-  display:grid; grid-template-columns:120px 1fr auto; gap:8px; align-items:center;
+.pl-table table{
+  width:100%; border-collapse:separate; border-spacing:0;
 }
-.bar .label{color:var(--muted)}
-.bar .track{height:12px; border-radius:999px; background:#0f1517; border:1px solid var(--border); overflow:hidden}
-.bar .fill{height:100%}
+.pl-table th, .pl-table td{
+  padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.pl-table tr:last-child td{border-bottom:none}
+.pl-table th{ text-align:left; color:var(--muted); font-weight:700; letter-spacing:.03em }
+.pl-table td.amt{ text-align:right; font-weight:900 }
+.pl-table .pos{ color:var(--pos) }
+.pl-table .neg{ color:var(--neg) }
+.pl-table .total{ font-weight:900 }
 
-/* 小螢幕微縮字，不改欄數（避免跳欄） */
+/* 小螢幕微縮字，不改欄數 */
 @media (max-width:360px){
   #rec-amt.amt{font-size:18px}
   .date-wrap input[type="date"]{font-size:16px}
