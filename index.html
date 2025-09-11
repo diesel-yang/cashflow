@@ -5,18 +5,16 @@
   <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=4012">
+  <link rel="stylesheet" href="style.css?v=4020">
 </head>
 <body>
 
-  <!-- 頂部：共享代號 + 連線 -->
+  <!-- 頂部：共享代號 + 連線 + 分頁 -->
   <header class="head card">
     <div class="head-row">
-      <input id="space-code" class="input" placeholder="輸入共享代號…" aria-label="共享代號" />
+      <input id="space-code" class="input" placeholder="輸入共享代號…" aria-label="共享代號">
       <button id="btn-connect" class="btn danger" aria-label="連線">未連線</button>
     </div>
-
-    <!-- 分頁：記帳 / 餐廳營收 / 個人收支 / 預算 / 設定 -->
     <nav class="tabs">
       <button class="tab active" data-target="page-rec">記帳</button>
       <button class="tab" data-target="page-biz">餐廳營收</button>
@@ -27,19 +25,19 @@
   </header>
 
   <main>
-    <!-- 記帳頁 -->
+    <!-- 記帳 -->
     <section id="page-rec" class="page show">
 
-      <!-- ① 收支 + 金額 + 日期（固定同一列） -->
+      <!-- 收支 / 金額 / 日期 -->
       <div class="card">
         <div class="top-eqgrid">
-          <div class="chip-group two" id="chip-io" role="group" aria-label="收支類型">
-            <button class="chip lg pressable active" data-io="expense">支出</button>
-            <button class="chip lg pressable" data-io="income">收入</button>
+          <div class="chip-group two" id="chip-io" role="group" aria-label="收支">
+            <button class="chip lg active" data-io="expense">支出</button>
+            <button class="chip lg" data-io="income">收入</button>
           </div>
 
-          <input id="rec-amt" type="number" inputmode="decimal"
-                 class="amt elevated center" placeholder="金額" aria-label="金額">
+          <input id="rec-amt" type="number" inputmode="decimal" class="amt elevated center"
+                 placeholder="金額" aria-label="金額">
 
           <div class="date-wrap">
             <input id="rec-date" type="date" class="elevated" aria-label="日期">
@@ -47,7 +45,7 @@
         </div>
       </div>
 
-      <!-- ② 口袋（SVG 即本體） + 付款人 -->
+      <!-- 口袋 + 付款人 -->
       <div class="card">
         <div class="section-head">付款口袋</div>
         <div id="pockets-row" class="pockets-grid"></div>
@@ -56,14 +54,13 @@
         <div id="payers-row" class="grid grid-3"></div>
       </div>
 
-      <!-- ③ 用途 / 類別 / 項目 / 備註 / 送出 -->
+      <!-- 用途/類別/項目/備註/送出 -->
       <div class="card">
         <div class="scope-head">
           <div class="section-head">用途</div>
-          <!-- 二等分同一欄 -->
           <div class="chip-group two" id="chip-scope" role="group" aria-label="用途">
-            <button class="chip pressable active" data-scope="restaurant">餐廳</button>
-            <button class="chip pressable" data-scope="personal">個人</button>
+            <button class="chip active" data-scope="restaurant">餐廳</button>
+            <button class="chip" data-scope="personal">個人</button>
           </div>
         </div>
 
@@ -75,9 +72,105 @@
 
         <div class="row cols-3">
           <input id="new-cat-name" class="input span-2" placeholder="新增項目（名稱，可附 emoji）" aria-label="新增項目">
-          <button id="btn-add-cat" class="btn-elevated ghost pressable">建立項目</button>
+          <button id="btn-add-cat" class="btn-elevated ghost">建立項目</button>
         </div>
 
         <div class="row cols-3">
           <input id="rec-note" class="input span-2" placeholder="備註（可省略）" aria-label="備註">
-          <button id="btn-submit" class="btn-3
+          <button id="btn-submit" class="btn-3d primary">送出</button>
+        </div>
+      </div>
+
+      <!-- 本月紀錄 -->
+      <div class="card">
+        <div class="section-head">本月紀錄</div>
+        <div id="recent-list" class="list"></div>
+      </div>
+    </section>
+
+    <!-- 餐廳營收（本月 P&L + 圓餅） -->
+    <section id="page-biz" class="page">
+      <div class="card">
+        <div class="section-head">餐廳 P&L（本月）</div>
+        <div class="kpi grid grid-3">
+          <div class="kpi-item"><div class="kpi-title">營業收入</div><div class="kpi-val" id="biz-income">0</div></div>
+          <div class="kpi-item"><div class="kpi-title">營業成本</div><div class="kpi-val" id="biz-cogs">0</div></div>
+          <div class="kpi-item"><div class="kpi-title">毛利</div><div class="kpi-val" id="biz-gp">0</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head">本月支出（按類別）</div>
+        <canvas id="biz-pie" height="240"></canvas>
+        <div id="biz-table" class="list"></div>
+      </div>
+    </section>
+
+    <!-- 個人收支（J/W 切換 + 圓餅） -->
+    <section id="page-personal" class="page">
+      <div class="card">
+        <div class="chip-group two" id="chip-person" role="group" aria-label="個人">
+          <button class="chip active" data-person="J">Jack</button>
+          <button class="chip" data-person="W">Wal</button>
+        </div>
+        <div class="kpi grid grid-3">
+          <div class="kpi-item"><div class="kpi-title">收入</div><div class="kpi-val" id="p-inc">0</div></div>
+          <div class="kpi-item"><div class="kpi-title">支出</div><div class="kpi-val" id="p-exp">0</div></div>
+          <div class="kpi-item"><div class="kpi-title">本月預支</div><div class="kpi-val" id="p-adv">0</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head">本月支出（按類別）</div>
+        <canvas id="p-pie" height="240"></canvas>
+        <div id="p-table" class="list"></div>
+      </div>
+    </section>
+
+    <section id="page-budget" class="page">
+      <div class="card center muted">（預算建置中）</div>
+    </section>
+
+    <section id="page-settings" class="page">
+      <div class="card center muted">（設定建置中）</div>
+    </section>
+  </main>
+
+  <footer class="foot">極速記帳 · v4.02</footer>
+
+  <!-- 小豬 symbol（簡化 path，避免 console path 錯誤） -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="pig-icon" viewBox="0 0 128 96">
+      <path fill="currentColor" d="M86 78c-2 0-4-1-5-3-8 3-16 3-23 2-8-1-15-3-22-6-1 3-4 5-7 5-5 0-9-4-9-9v-6c-4-3-7-7-10-12-2-3-5-4-8-5 3-2 6-6 7-12 1-6-1-13-4-16 5 0 8-1 9-4 5-10 14-18 24-22l-3-3c-1-1-1-2 0-3 2-1 6-1 9 0 1-5 3-6 8-6 9 0 20 8 22 17 1 4 1 8 0 11 7-1 14-1 21 1 20 6 35 23 36 41 3 2 7 2 10 0 2-1 3-3 4-5 2-4-1-6-4-5-2 0-3 3-1 5l2 1c1 1 0 2-1 3-4 0-8-3-9-7 2-5 9-6 12-1 1 2 1 4 1 6-1 9-8 16-19 18-3 12-11 22-22 29v5c0 6-5 10-11 10z"/>
+    </symbol>
+  </svg>
+
+  <!-- Firebase（Compat） -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <!-- 極簡圓餅（無外部套件） -->
+  <script>
+    function drawPie(canvas, dataPairs){
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width = canvas.clientWidth || canvas.width;
+      const H = canvas.height = canvas.clientHeight || canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const total = dataPairs.reduce((s,[,v])=>s+Math.max(0,v),0) || 1;
+      let ang = -Math.PI/2;
+      dataPairs.forEach(([label,val],i)=>{
+        const frac = Math.max(0,val)/total;
+        const a2 = ang + frac*2*Math.PI;
+        ctx.beginPath();
+        const hue = 200 + (i*50)%160;
+        ctx.fillStyle = `hsl(${hue} 70% 55%)`;
+        ctx.moveTo(W/2, H/2);
+        ctx.arc(W/2,H/2, Math.min(W,H)/2.2, ang, a2);
+        ctx.closePath(); ctx.fill();
+        ang = a2;
+      });
+    }
+  </script>
+
+  <script src="app.js?v=4020"></script>
+</body>
+</html>
