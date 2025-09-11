@@ -123,12 +123,10 @@ input:-webkit-autofill,input:-webkit-autofill:focus{-webkit-text-fill-color:var(
 .pocket.positive .amt{color:var(--pos)}
 /* 點選高亮（SVG 周圍暈光 + 容器外框） */
 .pocket.active{
-  border-color:var(--primary);
-  box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
-.pocket.active .pig{
-  filter:drop-shadow(0 0 8px rgba(18,180,196,.55));
-}
+.pocket.active .pig { filter: drop-shadow(0 0 0.6rem rgba(18,180,196,.45)); }
 
 /* 最近列表 */
 .list{display:grid;gap:8px}
