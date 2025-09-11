@@ -22,6 +22,7 @@ main{padding-bottom:40px}
 .section-head{font-size:15px; font-weight:800; letter-spacing:.04em}
 .center{display:grid;place-items:center}
 .muted{color:var(--muted)}
+.foot{color:var(--muted); text-align:center; padding:12px}
 
 /* 頂部 */
 .head .head-row{
@@ -112,7 +113,7 @@ main{padding-bottom:40px}
 .pocket .pig{ width:120px; height:120px; color:#6aa7ff; }
 .pocket .pig use{ pointer-events:none }
 .pocket .name{ font-size:15px; color:var(--muted); }
-.pocket .badge{ /* 內嵌金額 */
+.pocket .badge{ /* 內嵌金額（使用絕對定位疊在小豬身體上） */
   position:absolute; top:48%; left:50%; transform:translate(-50%,-50%);
   font-size:20px; font-weight:900; color:var(--text); padding:.15em .5em;
   background:#0b1215; border:1px solid #1c2a2e; border-radius:10px;
@@ -122,7 +123,7 @@ main{padding-bottom:40px}
 .pocket.negative .pig{ color:#ff6b6b }
 .pocket.negative .badge{ color:var(--neg) }
 .pocket.positive .badge{ color:var(--pos) }
-/* 讓 SVG 受色彩控制並在高亮時更明顯 */
+/* 讓 SVG 受色彩控制並在高亮時更明顯（補 stroke-linejoin / -cap） */
 .pocket .pig path{ fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round }
 
 /* 最近列表 */
@@ -136,16 +137,35 @@ main{padding-bottom:40px}
 .list .r-amt.pos{color:var(--pos)}
 .list .r-amt.neg{color:var(--neg)}
 
-/* 小螢幕微縮字，不改欄數 */
+/* 分頁顯示 */
+.page{display:none}
+.page.show{display:block}
+
+/* ===== P&L / 小條圖（無外掛） ===== */
+.table{display:grid; gap:6px}
+.table .trow{
+  display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+  padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--chip-bg);
+}
+.table .trow.total{font-weight:900; border-color:var(--primary)}
+.table .trow.dim{color:var(--muted)}
+.table .amt.pos{color:var(--pos); font-weight:900}
+.table .amt.neg{color:var(--neg); font-weight:900}
+
+.bars{display:grid; gap:8px}
+.bar{
+  display:grid; grid-template-columns:120px 1fr auto; gap:8px; align-items:center;
+}
+.bar .label{color:var(--muted)}
+.bar .track{height:12px; border-radius:999px; background:#0f1517; border:1px solid var(--border); overflow:hidden}
+.bar .fill{height:100%}
+
+/* 小螢幕微縮字，不改欄數（避免跳欄） */
 @media (max-width:360px){
   #rec-amt.amt{font-size:18px}
   .date-wrap input[type="date"]{font-size:16px}
   .chip.lg{font-size:16px}
 }
-
-/* 分頁顯示 */
-.page{display:none}
-.page.show{display:block}
 
 /* 可用性 */
 :where(button,.chip,.pocket,input):focus-visible{outline:2px solid var(--primary); outline-offset:2px}
