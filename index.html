@@ -5,7 +5,7 @@
   <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css?v=4025" />
+  <link rel="stylesheet" href="style.css?v=4026" />
 </head>
 <body>
 
@@ -27,6 +27,8 @@
   <main>
     <!-- 記帳頁 -->
     <section id="page-rec" class="page show" role="tabpanel">
+
+      <!-- ① 收支 + 金額 + 日期 -->
       <div class="card">
         <div class="top-eqgrid">
           <div class="chip-group two" id="chip-io" role="group" aria-label="收支類型">
@@ -37,20 +39,24 @@
           <input id="rec-amt" type="number" inputmode="decimal"
                  class="amt elevated center" placeholder="金額" aria-label="金額" />
 
+          <!-- 日期：透明 input 疊在上層 + 可視顯示層（年後換行） -->
           <div class="date-wrap">
-            <input id="rec-date" type="date" class="elevated" aria-label="日期" />
+            <input id="rec-date" type="date" class="date-input-overlay" aria-label="日期" />
+            <div class="date-display elevated" id="rec-date-display" aria-hidden="true"></div>
           </div>
         </div>
       </div>
 
+      <!-- ② 付款口袋 + 付款人/收款人 -->
       <div class="card">
         <div class="section-head">付款口袋</div>
         <div id="pockets-row" class="pockets-grid"></div>
 
         <div class="section-head">付款人 / 收款人</div>
-        <div id="payers-row" class="grid grid-3"></div>
+        <div id="payers-row" class="grid grid-3 tight"></div>
       </div>
 
+      <!-- ③ 用途 / 類別 / 項目 / 備註 / 送出 -->
       <div class="card">
         <div class="scope-head">
           <div class="section-head">用途</div>
@@ -67,52 +73,34 @@
         <div id="items-grid" class="grid grid-4"></div>
 
         <div class="row cols-3">
-          <input id="new-cat-name" class="input span-2" placeholder="新增項目（名稱，可附 emoji）" />
+          <input id="new-cat-name" class="input span-2" placeholder="新增項目（名稱，可附 emoji）" aria-label="新增項目" />
           <button id="btn-add-cat" class="btn-elevated ghost pressable">建立項目</button>
         </div>
 
         <div class="row cols-3">
-          <input id="rec-note" class="input span-2" placeholder="備註（可省略）" />
+          <input id="rec-note" class="input span-2" placeholder="備註（可省略）" aria-label="備註" />
           <button id="btn-submit" class="btn-3d primary">送出</button>
         </div>
       </div>
 
+      <!-- ④ 本月紀錄 -->
       <div class="card">
         <div class="section-head" id="recent-title">本月紀錄</div>
         <div id="recent-list" class="list"></div>
       </div>
     </section>
 
-    <!-- 營收 -->
+    <!-- 其它分頁保持骨架 -->
     <section id="page-biz" class="page" role="tabpanel">
-      <div class="card">
-        <div class="section-head">餐廳 P&L（本月）</div>
-        <div id="biz-pl" class="pl-table"></div>
-      </div>
-      <div class="card">
-        <div class="section-head">餐廳支出分佈（本月）</div>
-        <canvas id="biz-pie" class="auto-canvas" aria-label="餐廳支出圓餅圖"></canvas>
-      </div>
+      <div class="card center muted">（餐廳報表在此頁）</div>
     </section>
 
-    <!-- 收支 -->
     <section id="page-personal" class="page" role="tabpanel">
-      <div class="card">
-        <div class="section-head">個人收支摘要（本月）</div>
-        <div id="pers-pl" class="pl-table"></div>
-      </div>
-      <div class="card">
-        <div class="section-head">個人支出分佈（本月）</div>
-        <canvas id="pers-pie" class="auto-canvas" aria-label="個人支出圓餅圖"></canvas>
-      </div>
+      <div class="card center muted">（個人收支報表在此頁）</div>
     </section>
 
-    <!-- 預算 -->
     <section id="page-budget" class="page" role="tabpanel">
-      <div class="card">
-        <div class="section-head">本月預算 / 結餘快覽</div>
-        <div id="budget-summary" class="pl-table"></div>
-      </div>
+      <div class="card center muted">（預算在此頁）</div>
     </section>
 
     <section id="page-settings" class="page" role="tabpanel">
@@ -130,9 +118,8 @@
     </symbol>
   </svg>
 
-  <!-- Firebase（Compat 版） -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="app.js?v=4025"></script>
+  <script src="app.js?v=4026"></script>
 </body>
 </html>
