@@ -2,10 +2,10 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>極速記帳 v4.1</title>
+  <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=4010">
+  <link rel="stylesheet" href="style.css?v=4011">
 </head>
 <body>
 
@@ -18,6 +18,7 @@
     <nav class="tabs">
       <button class="tab active" data-target="page-rec">記帳</button>
       <button class="tab" data-target="page-report">報表</button>
+      <button class="tab" data-target="page-budget">預算</button>
       <button class="tab" data-target="page-settings">設定</button>
     </nav>
   </header>
@@ -43,7 +44,7 @@
         </div>
       </div>
 
-      <!-- ② 付款口袋（= 小豬 SVG） + 付款人/收款人 -->
+      <!-- ② 付款口袋 + 付款人/收款人 -->
       <div class="card">
         <div class="section-head">付款口袋</div>
         <div id="pockets-row" class="pockets-grid"></div>
@@ -70,7 +71,6 @@
 
         <div class="row cols-3">
           <input id="new-cat-name" class="input span-2" placeholder="新增項目（名稱，可附 emoji）" aria-label="新增項目">
-          <!-- 這顆保留手動建立備用；實際送出時也會自動補項目 -->
           <button id="btn-add-cat" class="btn-elevated ghost pressable">建立項目</button>
         </div>
 
@@ -80,23 +80,79 @@
         </div>
       </div>
 
-      <!-- ④ 本月紀錄（以 date 欄位查詢本月） -->
+      <!-- ④ 本月紀錄 -->
       <div class="card">
         <div class="section-head" id="recent-title">本月紀錄</div>
         <div id="recent-list" class="list"></div>
       </div>
     </section>
 
+    <!-- 報表頁 -->
     <section id="page-report" class="page">
-      <div class="card center muted">（報表建置中）</div>
+      <div class="card">
+        <div class="section-head">報表範圍</div>
+        <div id="report-scope" class="chip-group three">
+          <button class="chip pressable active" data-rscope="restaurant">餐廳</button>
+          <button class="chip pressable" data-rscope="jack">Jack</button>
+          <button class="chip pressable" data-rscope="wal">Wal</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row pack stat-row">
+          <div><div class="subhead">本月收入</div><div id="r-inc" class="kpi pos">0</div></div>
+          <div><div class="subhead">本月支出</div><div id="r-exp" class="kpi neg">0</div></div>
+          <div><div class="subhead">本月淨額</div><div id="r-net" class="kpi">0</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">圓餅圖</div>
+        <div class="chart-box"><canvas id="pie-chart" width="320" height="320" aria-label="本月類別分布"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">明細（依類別彙總）</div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead><tr><th>類別</th><th class="tr">金額</th></tr></thead>
+            <tbody id="report-tbody"></tbody>
+            <tfoot><tr><th>合計</th><th id="report-sum" class="tr">0</th></tr></tfoot>
+          </table>
+        </div>
+      </div>
     </section>
 
+    <!-- 預算頁 -->
+    <section id="page-budget" class="page">
+      <div class="card">
+        <div class="row pack">
+          <div class="section-head">預算編制</div>
+          <div class="subhead" id="bud-month-label"></div>
+        </div>
+        <div class="chip-group three" id="budget-scope">
+          <button class="chip pressable active" data-bscope="restaurant">餐廳</button>
+          <button class="chip pressable" data-bscope="jack">Jack</button>
+          <button class="chip pressable" data-bscope="wal">Wal</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">各類別預算</div>
+        <div id="budget-list" class="budget-grid"></div>
+        <div class="row">
+          <button id="btn-save-budget" class="btn-3d primary">儲存預算</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 設定頁 -->
     <section id="page-settings" class="page">
       <div class="card center muted">（設定建置中）</div>
     </section>
   </main>
 
-  <footer class="foot">極速記帳 · v4.0</footer>
+  <footer class="foot">極速記帳 · v4.01 + Reports/Budget</footer>
 
   <!-- 小豬（口袋）SVG symbol -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -111,7 +167,10 @@ d="m 159.10807,111.35662 c -2.40703,-0.45785 -5.28801,-2.59846 -6.62113,-4.91958
   <!-- Firebase（Compat 版） -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="app.js?v=4010"></script>
 
+  <!-- Chart.js for pies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script src="app.js?v=4011"></script>
 </body>
 </html>
