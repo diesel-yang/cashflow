@@ -1,4 +1,4 @@
-// app.js v4.02 — 熱修：流體排版、三欄穩定、SVG=口袋（外框高亮）、日期預設今日、分頁、P&L+圓餅圖
+// v4.02 + 修補 4024：圓餅圖自適應 & 色票、日期/豬尺寸調整、分頁更名
 /* Firebase（Compat） */
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
@@ -32,7 +32,11 @@ const state = {
   catalog: [],
   catalogIndex: null
 };
-let allRecordsCache = []; // 供 P&L 與圖表使用（全資料，非僅本月）
+let allRecordsCache = [];
+
+/* 顏色（圓餅色票） */
+const PAL_OPEX = ['#4cc9f0','#4361ee','#3a0ca3','#b5179e','#f72585'];
+const PAL_PERS = ['#84dcc6','#a0ced9','#cfbaf0','#ffc8dd','#ffafcc','#b9fbc0','#f1fa8c','#ffd6a5'];
 
 /* Groups / Icons（保持既有） */
 const REST_GROUPS = ['營業收入','銷貨成本','人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
@@ -88,7 +92,7 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* 付款口袋（SVG = 卡片；金額內嵌） */
+/* 口袋（SVG = 卡片；金額內嵌） */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
@@ -129,7 +133,7 @@ function updatePocketAmountsFromRecords(records){
   }
 }
 
-/* Payers (J / W / JW 三等分) */
+/* Payers */
 function renderPayers(){
   const row=byId('payers-row'); if(!row) return;
   const data = [{key:'J',label:'J',icon:'👤'},{key:'W',label:'W',icon:'👤'},{key:'JW',label:'JW',icon:'👥'}];
@@ -175,7 +179,7 @@ function renderItems(){
   };
 }
 
-/* 建立/補項目（可附 emoji） */
+/* 建立/補項目 */
 byId('btn-add-cat')?.addEventListener('click', addItemToCatalog);
 async function addItemToCatalog(){
   const input=byId('new-cat-name'); if(!input) return;
@@ -195,20 +199,20 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* 本月紀錄 + 餘額（維持既有 monthly filter） */
+/* 本月紀錄 + 餘額 + 報表 */
 function watchRecentAndBalances(){
   const list = byId('recent-list'); if(!list) return;
   const refRec = db.ref(`rooms/${state.space}/records`);
   refRec.on('value', snap=>{
     const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
-    allRecordsCache = arr.slice(); // 更新全域快取
+    allRecordsCache = arr.slice();
 
-    // 只顯示本月
     const d=new Date(); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const rows = arr.filter(r=>(r.date||'').startsWith(ym)).sort((a,b)=> (b.ts||0)-(a.ts||0));
     list.innerHTML = rows.map(r=>{
+      // 列表日期固定 YYYY-MM-DD
+      const dstr = (r.date||'').slice(0,10) || new Date(r.ts).toISOString().slice(0,10);
       const sign = r.io==='expense'?'-':'+';
-      const dstr = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
       return `<div class="row">
         <div class="r-date">${dstr}</div>
         <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group||''}${r.item? '・'+r.item:''}</div>
@@ -216,10 +220,7 @@ function watchRecentAndBalances(){
       </div>`;
     }).join('') || `<div class="muted">（本月無紀錄）</div>`;
 
-    // 餘額依全部紀錄累計
     updatePocketAmountsFromRecords(arr);
-
-    // 更新報表 & 圓餅圖
     renderReports();
   });
 }
@@ -233,34 +234,20 @@ async function onSubmit(){
   if(!amt) return alert('請輸入金額');
   if(!state.pocket || !state.payer) return alert('請選口袋與付款人/收款人');
 
-  // 若輸入的新項目名稱存在，先補 catalog（合併流程）
   const newName = (byId('new-cat-name')?.value||'').trim();
   if(newName && state.group){ await addItemToCatalog(); }
 
   const dateStr=byId('rec-date')?.value||todayISO(); 
   const ts = Date.parse(dateStr)||Date.now();
   const note=byId('rec-note')?.value||'';
-  const rec={
-    ts, date:dateStr,
-    amount:amt,
-    io:state.io,
-    scope:state.scope,
-    group:state.group,
-    item:state.item,
-    payer:state.payer,
-    pocket:state.pocket,
-    note
-  };
+  const rec={ ts, date:dateStr, amount:amt, io:state.io, scope:state.scope, group:state.group,
+              item:state.item, payer:state.payer, pocket:state.pocket, note };
   const room = db.ref(`rooms/${state.space}`);
   const id = room.child('records').push().key;
   const updates = {};
   updates[`records/${id}`] = rec;
-  updates[`balances/${state.pocket}`] = firebase.database.ServerValue.increment(
-    (state.io==='income'?1:-1) * amt
-  );
+  updates[`balances/${state.pocket}`] = firebase.database.ServerValue.increment((state.io==='income'?1:-1) * amt);
   await room.update(updates);
-
-  // 清空輸入
   byId('rec-amt').value=''; byId('rec-note').value='';
 }
 
@@ -298,31 +285,6 @@ function bindScopeChips(){
     renderGroups(); renderItems();
   });
 }
-
-/* 連線 */
-const btnConnect = byId('btn-connect');
-function doConnect(){
-  const input = byId('space-code');
-  const code = (input?.value||'').trim();
-  if(!code){ alert('請輸入共享代號'); return; }
-  state.space = code;
-  ensureRoom()
-    .then(ensureCatalog)
-    .then(()=>{
-      renderPockets(); renderPayers();
-      watchRecentAndBalances();
-      btnConnect.textContent='連線中';
-      btnConnect.classList.add('success');
-      btnConnect.classList.remove('danger');
-      localStorage.setItem('CF_SPACE',state.space);
-    })
-    .catch(err=>{
-      console.error(err);
-      alert('連線失敗，請稍後再試');
-    });
-}
-btnConnect?.addEventListener('click', doConnect);
-byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doConnect(); });
 
 /* ===== 報表與圓餅圖 ===== */
 function currentMonthPrefix(){
@@ -368,15 +330,37 @@ function buildPersonalPL(monthRecs){
   return {byIncome, byExpense, incomeTotal, expenseTotal, net};
 }
 
-/* 原生 canvas 圓餅圖（不指定色票，由瀏覽器預設） */
-function drawPie(canvas, labels, values){
+/* Canvas 自動尺寸：依父層寬度，比例 0.66，高 DPI 清晰 */
+const ro = new ResizeObserver(entries=>{
+  for(const e of entries){
+    const cvs = e.target.matches?.('.auto-canvas') ? e.target : e.target.querySelector?.('.auto-canvas');
+    if(!cvs) continue;
+    const w = Math.max(240, Math.floor(e.contentRect.width));
+    const h = Math.floor(w*0.66);
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    cvs.width = Math.floor(w*dpr);
+    cvs.height = Math.floor(h*dpr);
+    cvs.style.width = w+'px';
+    cvs.style.height = h+'px';
+  }
+  // 尺寸變了就重畫
+  renderReports();
+});
+function observeCanvas(){
+  $$('.auto-canvas').forEach(c=> ro.observe(c.parentElement));
+}
+
+/* 原生 canvas 圓餅圖（帶色票與圖例） */
+function drawPie(canvas, labels, values, palette){
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
-  const cx = W/2, cy = H/2, r = Math.min(W,H)*0.36;
-
-  const total = values.reduce((a,b)=>a+(Number(b)||0),0) || 1;
+  const dpr = Math.max(1, window.devicePixelRatio||1);
+  ctx.setTransform(1,0,0,1,0,0); // 已用實像素
   ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2, r = Math.min(W,H)*0.36;
+  const total = values.reduce((a,b)=>a+(Number(b)||0),0) || 1;
 
   let start = -Math.PI/2;
   for(let i=0;i<values.length;i++){
@@ -386,17 +370,22 @@ function drawPie(canvas, labels, values){
     ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,start,start+ang);
     ctx.closePath();
-    ctx.fill(); // 使用預設顏色
+    ctx.fillStyle = palette[i % palette.length];
+    ctx.fill();
     start += ang;
   }
 
-  // 標籤
-  ctx.fillStyle = '#e6eef0'; ctx.font = '12px system-ui';
-  let y = 20;
+  // 圖例
+  const baseX = Math.round(16*dpr), baseY = Math.round(16*dpr);
+  ctx.font = `${Math.round(12*dpr)}px system-ui`;
+  let y = baseY;
   for(let i=0;i<labels.length;i++){
-    ctx.fillRect(20,y-9,12,12); // 小色塊（同 fillStyle，簡化：不換色）
-    ctx.fillText(`${labels[i]}  ${Math.round(values[i]||0).toLocaleString('zh-TW')}`, 40, y+1);
-    y += 18;
+    ctx.fillStyle = palette[i % palette.length];
+    ctx.fillRect(baseX, y-10*dpr, 12*dpr, 12*dpr);
+    ctx.fillStyle = '#e6eef0';
+    const txt = `${labels[i]}  ${Math.round(values[i]||0).toLocaleString('zh-TW')}`;
+    ctx.fillText(txt, baseX + 16*dpr, y+1);
+    y += 18*dpr;
   }
 }
 
@@ -441,10 +430,9 @@ function renderReports(){
   ];
   renderPLTable(byId('biz-pl'), bizRows);
 
-  // 餐廳支出圓餅：只看 OPEX 群組
   const opexLabels = ['人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
   const opexValues = opexLabels.map(g => Math.abs(biz.byGroup.get(g)||0));
-  drawPie(byId('biz-pie'), opexLabels, opexValues);
+  drawPie(byId('biz-pie'), opexLabels, opexValues, PAL_OPEX);
 
   // 個人
   const per = buildPersonalPL(monthRecs);
@@ -457,10 +445,9 @@ function renderReports(){
   ];
   renderPLTable(byId('pers-pl'), perRows);
 
-  // 個人支出圓餅
   const expLabels = PERS_EXPENSE_GROUPS;
   const expValues = expLabels.map(g => Math.abs(per.byExpense.get(g)||0));
-  drawPie(byId('pers-pie'), expLabels, expValues);
+  drawPie(byId('pers-pie'), expLabels, expValues, PAL_PERS);
 
   // 預算頁快覽
   const budgetRows = [
@@ -484,16 +471,19 @@ function renderReports(){
     ensureRoom().then(ensureCatalog).then(()=>{
       renderPockets(); renderPayers();
       watchRecentAndBalances();
-      btnConnect.textContent='連線中';
-      btnConnect.classList.add('success');
-      btnConnect.classList.remove('danger');
+      byId('btn-connect').textContent='連線中';
+      byId('btn-connect').classList.add('success');
+      byId('btn-connect').classList.remove('danger');
     });
   }else{
-    btnConnect?.classList.add('danger');
-    btnConnect.textContent='未連線';
-    renderPockets(); renderPayers(); // 未連線也先渲染 UI
+    byId('btn-connect')?.classList.add('danger');
+    byId('btn-connect').textContent='未連線';
+    renderPockets(); renderPayers();
   }
 
   renderGroups(); renderItems();
   bindTabs(); bindIOChips(); bindScopeChips();
+
+  // 監看 canvas 父層尺寸，做自動縮放
+  observeCanvas();
 })();
