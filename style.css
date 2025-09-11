@@ -1,5 +1,5 @@
 /* ==========================================================================
-   極速記帳 - v4.02 熱修：流體排版 + 三欄不跳行 + 小豬即口袋（SVG 外框高亮）+ 圓餅圖樣式
+   v4.02 熱修 4024：圓餅圖自適應、色票；日期在 iOS 不溢出；小豬彈性縮放
    ========================================================================== */
 :root{
   --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
@@ -13,7 +13,7 @@ html,body{
 }
 main{padding-bottom:40px}
 
-/* Cards（在手機縮窄時自適應） */
+/* Cards */
 .card{
   background:var(--card); border:1px solid var(--border); border-radius:16px;
   padding:12px; display:grid; gap:12px; box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
@@ -58,17 +58,16 @@ main{padding-bottom:40px}
 }
 .chip.lg{font-size:clamp(15px,4.4vw,18px)}
 
-/* ===== 三欄（支出/收入｜金額｜日期）不跳行，會隨容器縮小 ===== */
+/* ===== 三欄（支出/收入｜金額｜日期）不跳行 ===== */
 .top-eqgrid{
   display:grid;
   grid-template-columns:repeat(3, minmax(0,1fr));
-  gap:12px; align-items:center;
-  min-width:0;
+  gap:12px; align-items:center; min-width:0;
 }
 .chip-group.two{
   display:grid; grid-template-columns:1fr 1fr; gap:10px; min-width:0;
 }
-/* 金額輸入：深色主題白字，大小自適應 */
+/* 金額輸入 */
 #rec-amt.amt{
   text-align:center; font-weight:900; font-size:clamp(18px,6vw,22px);
   color:var(--text)!important; -webkit-text-fill-color:var(--text)!important; caret-color:var(--text);
@@ -78,11 +77,16 @@ main{padding-bottom:40px}
   background:linear-gradient(#0e1619,#0b1215); color:var(--text); padding:12px 14px;
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25);
 }
+/* 日期（iOS/Safari 微調以免撐破） */
+.date-wrap{min-width:0}
 .date-wrap input[type="date"]{
-  width:100%; min-width:0; text-align:center; font-weight:800; font-size:clamp(14px,4.8vw,18px);
+  width:100%; min-width:0; text-align:center; font-weight:800;
+  font-size:clamp(12px,4.2vw,18px); letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-variant-numeric: tabular-nums;
 }
+.date-wrap input[type="date"]::-webkit-date-and-time-value{ text-align:center }
 
-/* 送出：立體 */
+/* 送出 */
 .btn-3d{
   appearance:none; width:100%;
   border:1px solid #1c2a2e; border-radius:14px; padding:14px 18px;
@@ -102,24 +106,22 @@ main{padding-bottom:40px}
 .grid-4{grid-template-columns:repeat(4,1fr)}
 .pockets-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
 
-/* 口袋（SVG 就是卡片本體；不再用外框包住 svg） */
+/* 口袋（SVG 就是卡片） */
 .pocket{
   position:relative;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px;
-  background:transparent; border:none; border-radius:0; padding:10px 6px 8px;
-  cursor:pointer;
+  background:transparent; border:none; padding:10px 6px 8px; cursor:pointer;
 }
-.pocket .pig{ 
-  width:100%; max-width:160px; aspect-ratio:167/139; 
+.pocket .pig{
+  width:100%; max-width:180px; aspect-ratio:167/139;
   color:#6aa7ff; display:block;
 }
 .pocket .name{ font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px; }
-.pocket .badge{ /* 金額，嵌入小豬身上 */
+.pocket .badge{
   position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
   font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .5em;
   background:#0b1215; border:1px solid #1c2a2e; border-radius:10px; pointer-events:none;
 }
-/* 高亮：改 SVG 的描邊顏色就是卡片外框高亮 */
 .pocket .pig path{ fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round }
 .pocket.active .pig{ color:var(--primary) }
 .pocket.negative .pig{ color:#ff6b6b }
@@ -137,10 +139,6 @@ main{padding-bottom:40px}
 .list .r-amt.pos{color:var(--pos)}
 .list .r-amt.neg{color:var(--neg)}
 
-/* 分頁顯示 */
-.page{display:none}
-.page.show{display:block}
-
 /* P&L 表格 */
 .pl-table{ overflow:auto; border:1px solid var(--border); border-radius:12px;}
 .pl-table table{ width:100%; border-collapse:separate; border-spacing:0; }
@@ -152,10 +150,8 @@ main{padding-bottom:40px}
 .pl-table .neg{ color:var(--neg) }
 .pl-table .total{ font-weight:900 }
 
-/* 小螢幕微縮字，不改欄數 */
-@media (max-width:360px){
-  .chip.lg{font-size:15px}
-}
+/* 自動尺寸 canvas：寬度 100%，高度隨寬比 0.66（JS 會設置像素與 DPR） */
+.auto-canvas{ width:100%; height:auto; display:block }
 
 /* 可用性 */
 :where(button,.chip,.pocket,input):focus-visible{outline:2px solid var(--primary); outline-offset:2px}
