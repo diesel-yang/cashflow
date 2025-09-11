@@ -1,4 +1,4 @@
-/* v4.02 修補 4025：分頁強制隱藏、iOS 日期不溢出、小豬完整自適應、圓餅圖維持 */
+/* v4.02 熱修 4026：日期可換行、小豬不被裁切、收款人 3 鈕不外溢 */
 :root{
   --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
   --primary:#12b4c4; --border:#203033; --chip-bg:#0f1719; --chip-active:#0f2f35;
@@ -39,9 +39,9 @@ main{padding-bottom:40px}
   align-items:center; justify-content:center; gap:8px; font-size:clamp(14px,3.8vw,16px)}
 .chip.active{background:var(--chip-active); border-color:var(--primary);
   box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent)}
-.chip.lg{font-size:clamp(15px,4.4vw,18px)}
+.chip.lg{font-size:clamp(15px,4.4vw,18px); width:100%} /* 讓 chip 填滿格子 */
 
-/* ===== 三欄固定在同一列 ===== */
+/* ===== 三欄固定在同一列（支出/收入｜金額｜日期） ===== */
 .top-eqgrid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:center; min-width:0}
 .top-eqgrid > *{min-width:0}
 .chip-group.two{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-width:0}
@@ -51,17 +51,18 @@ main{padding-bottom:40px}
   background:linear-gradient(#0e1619,#0b1215); color:var(--text); padding:12px 12px;
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25)}
 
-/* 日期（iOS 不外溢） */
+/* 日期（可換行的顯示層） */
 .date-wrap{min-width:0}
-.date-wrap input[type="date"]{
-  width:100%; min-width:0; text-align:center; font-weight:800;
-  -webkit-appearance:none; appearance:none;
-  font-size:clamp(12px,3.8vw,16px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  font-variant-numeric: tabular-nums;
+.date-box{position:relative; width:100%; border-radius:12px}
+.date-box input[type="date"]{
+  width:100%; background:transparent; border:0; padding:0; margin:0; height:0; /* 讓原生只負責彈窗，不佔空間 */
+  color:transparent; -webkit-text-fill-color:transparent; caret-color:transparent; outline:0;
+  position:absolute; inset:0; z-index:2;
 }
-.date-wrap input[type="date"]::-webkit-date-and-time-value{text-align:center}
-.date-wrap input[type="date"]::-webkit-datetime-edit{padding:0 2px}
-.date-wrap input[type="date"]::-webkit-datetime-edit-fields-wrapper{display:inline-flex; justify-content:center}
+.date-display{
+  position:relative; z-index:1; width:100%; text-align:center; font-weight:800;
+  font-size:clamp(12px,3.8vw,16px); white-space:pre; line-height:1.15; padding:2px 4px;
+}
 
 /* 送出 */
 .btn-3d{appearance:none; width:100%; border:1px solid #1c2a2e; border-radius:14px; padding:14px 18px;
@@ -76,15 +77,15 @@ main{padding-bottom:40px}
 
 /* Grids */
 .grid{display:grid; gap:10px}
-.grid-3{grid-template-columns:repeat(3,1fr)}
-.grid-4{grid-template-columns:repeat(4,1fr)}
-.pockets-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+.grid-3{grid-template-columns:repeat(3, minmax(0,1fr))} /* 防止三顆鈕外溢 */
+.grid-4{grid-template-columns:repeat(4, minmax(0,1fr))}
+.pockets-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px;}
 
 /* 口袋（SVG = 卡片本體，完整顯示） */
 .pocket{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px;
   background:transparent; border:none; padding:10px 6px 8px; cursor:pointer;
-  min-height:clamp(150px,38vw,200px)}
-.pocket .pig{width:clamp(90px,28vw,180px); aspect-ratio:167/139; color:#6aa7ff; display:block}
+  min-height:clamp(140px,34vw,200px); overflow:visible;}
+.pocket .pig{width:clamp(80px,26vw,170px); aspect-ratio:167/139; color:#6aa7ff; display:block}
 .pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px}
 .pocket .badge{position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
   font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .5em;
@@ -122,5 +123,8 @@ main{padding-bottom:40px}
 .page{display:none !important}
 .page.show{display:block !important}
 
-/* 可用性 */
+/* 極小螢幕微調 */
+@media (max-width:360px){
+  .chip.lg{padding:8px 10px}
+}
 :where(button,.chip,.pocket,input):focus-visible{outline:2px solid var(--primary); outline-offset:2px}
