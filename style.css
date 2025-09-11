@@ -1,11 +1,6 @@
 /* ==========================================================================
    極速記帳 - 高對比深色（mobile-first）
-   v4.0.1 只針對：
-   1) 本月紀錄 UI 標題仍沿用
-   2) 用途按鈕二等分、按鈕內容置中
-   3) 口袋 = 小豬 SVG 本體（無卡片底）
-   4) 手機自適應：Grid + minmax；三欄不跳行
-   5) 所有按鈕內字與圖示置中
+   v4.01 + Reports/Budget：等寬三欄、不跳行；送出立體；報表與預算樣式
    ========================================================================== */
 
 :root{
@@ -22,10 +17,11 @@
 }
 
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial}
+html,body{
+  margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,Inter,'Noto Sans TC','Segoe UI',Roboto,Arial
+}
 
-/* 基本卡片 */
 .card{
   background:var(--card);border:1px solid var(--border);
   border-radius:16px;padding:12px;display:grid;gap:12px;
@@ -33,21 +29,19 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   margin:8px 12px;
 }
 .section-head{font-size:15px;font-weight:800;letter-spacing:.04em}
+.subhead{font-size:12px;color:var(--muted)}
 .center{display:grid;place-items:center}
 .muted{color:var(--muted)}
 .space{flex:1}
 
-/* 頂部 */
 .head .head-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
 .tabs{display:flex;gap:8px}
 .tab{
   border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
-  padding:9px 13px;border-radius:999px;cursor:pointer;
-  display:inline-flex;align-items:center;justify-content:center;
+  padding:9px 13px;border-radius:999px;cursor:pointer
 }
 .tab.active{background:var(--chip-active);border-color:var(--primary);font-weight:800}
 
-/* Inputs / Buttons */
 .input{
   width:100%;background:var(--chip-bg);color:var(--text);
   border:1px solid var(--border);border-radius:12px;padding:12px 14px;
@@ -56,62 +50,44 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .btn.danger{background:#dc3545;color:#fff}
 .btn.success{background:#2ac3a2;color:#001114}
 
-/* Chips（所有內容置中） */
+/* Chips */
 .chip{
   border:1px solid var(--border);background:var(--chip-bg);color:var(--text);
   border-radius:12px;padding:10px 12px;min-height:48px;
-  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  text-align:center;
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center
 }
 .chip.active{background:var(--chip-active);border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent)}
 .chip.lg{font-size:18px}
+#chip-scope .chip{font-size:18px}
+.chip-group.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip-group.three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 
-/* 用途：二等分欄寬（與你原 HTML 的 .chip-group.wide 對應） */
-.chip-group.wide{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;
-}
-
-/* ===== 修正：頂部等寬三欄（支出/收入｜金額｜日期）不跳行 ===== */
+/* ===== 修正：頂部等寬三欄不跳行 ===== */
 .top-eqgrid{
   display:grid;
-  grid-template-columns: repeat(3, minmax(0,1fr));
+  grid-template-columns: 1fr 1fr 1fr;
   gap:12px;
   align-items:center;
 }
-/* 收支二顆 chip 等分該欄寬 */
-.chip-group.two{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:10px;
-}
 
-/* 金額輸入：深色主題下強制白字、游標色 */
+/* 金額輸入（深色強制白字） */
 #rec-amt.amt{
-  text-align:center;
-  font-weight:900;
-  font-size:20px;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text);
+  text-align:center;font-weight:900;font-size:20px;
+  color: var(--text) !important;-webkit-text-fill-color: var(--text) !important;caret-color: var(--text);
 }
-/* iOS/Chrome 自動填入的字色也拉正 */
-input:-webkit-autofill,
-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--text) !important;
-  transition: background-color 9999s ease-out 0s;
+input:-webkit-autofill,input:-webkit-autofill:focus{
+  -webkit-text-fill-color: var(--text) !important;transition: background-color 9999s ease-out 0s;
 }
 
-/* 日期輸入：維持「立體」視覺、字級與金額一致且不撐破欄位 */
+/* 日期/立體風格 */
 .elevated{
   border-radius:12px;border:1px solid var(--border);
   background:linear-gradient(#0e1619,#0b1215);color:var(--text);padding:12px 14px;
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25);
 }
-.date-wrap input[type="date"]{
-  width:100%;text-align:center;font-weight:800;font-size:18px;min-width:0;
-}
+.date-wrap input[type="date"]{width:100%;text-align:center;font-weight:800;font-size:18px;min-width:0}
 
-/* 送出按鈕：立體卡片（和日期一致） */
+/* 送出立體 */
 .btn-3d{
   appearance:none;width:100%;
   border:1px solid #1c2a2e;border-radius:14px;padding:14px 18px;
@@ -125,37 +101,26 @@ input:-webkit-autofill:focus {
 .btn-3d:active{transform:translateY(1px);box-shadow:0 6px 16px rgba(0,0,0,.28),0 0 0 2px rgba(18,180,196,.25)}
 .btn-3d:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 
-/* Grids（手機自適應 with minmax） */
+/* 基礎格線 */
 .grid{display:grid;gap:10px}
-.grid-3{grid-template-columns:repeat(3, minmax(0,1fr))}
-.grid-4{grid-template-columns:repeat(4, minmax(0,1fr))}
-.pockets-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:12px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.pockets-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 
-/* ===== 口袋 = 小豬 SVG 本體（無卡片底） ===== */
-.pocket.pig-only{
-  border:none;background:transparent;padding:8px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  cursor:pointer;
+/* 口袋（SVG為主體） */
+.pocket{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;
+  border:1px solid var(--border);background:var(--card);border-radius:16px;padding:12px;min-height:160px;cursor:pointer
 }
-.pocket.pig-only .pig-wrap{
-  position:relative; width:110px; height:110px; display:grid; place-items:center;
-}
-.pocket.pig-only .pig{
-  width:100%; height:100%; color:#93a2ad; /* 透過 currentColor 被 JS 調整正負色 */
-  filter: drop-shadow(0 6px 16px rgba(0,0,0,.35));
-}
-.pocket.pig-only .amt-badge{
-  position:absolute; top:6px; left:50%; transform:translateX(-50%);
-  font-variant-numeric:tabular-nums; font-weight:900; font-size:16px;
-  padding:2px 8px; border-radius:10px;
-  background:#192126; color:#dfe8ee; border:1px solid rgba(255,255,255,.06);
-}
-.pocket.pig-only .name{font-size:15px;color:var(--muted);text-align:center}
-.pocket.pig-only.active .pig{ filter: drop-shadow(0 0 0 rgba(0,0,0,0)) drop-shadow(0 0 0 rgba(0,0,0,0)) brightness(1.05); }
-.pocket.pig-only.negative .pig{ color: var(--neg); }
-.pocket.pig-only.positive .pig{ color: var(--pos); }
+.pocket.active{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent)}
+.pocket .pig{width:88px;height:88px}
+.pocket .name{font-size:15px;color:var(--muted)}
+.pocket .amt{font-size:22px;font-weight:900;color:var(--text)}
+.pocket.negative .pig{color:#ff6b6b}
+.pocket.negative .amt{color:var(--neg)}
+.pocket.positive .amt{color:var(--pos)}
 
-/* 最近列表（白字） */
+/* 最近列表 */
 .list{display:grid;gap:8px}
 .list .row{
   display:grid;grid-template-columns:95px 1fr auto;gap:8px;align-items:center;
@@ -166,11 +131,38 @@ input:-webkit-autofill:focus {
 .list .r-amt.pos{color:var(--pos)}
 .list .r-amt.neg{color:var(--neg)}
 
-/* 小螢幕微縮字，不改三欄排版；類別3/項目4 仍維持 */
-@media (max-width:400px){
+/* 報表：KPI 與表格、圖表盒 */
+.kpi{font-size:22px;font-weight:900}
+.kpi.pos{color:var(--pos)} .kpi.neg{color:var(--neg)}
+.stat-row{grid-template-columns:repeat(3,1fr)}
+
+.chart-box{width:100%;display:grid;place-items:center}
+.chart-box canvas{max-width:420px;width:100%;height:auto}
+
+.table-wrap{overflow:auto}
+.tbl{width:100%;border-collapse:separate;border-spacing:0 8px}
+.tbl th,.tbl td{padding:10px 12px;background:var(--chip-bg);border:1px solid var(--border)}
+.tbl th:first-child,.tbl td:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
+.tbl th:last-child,.tbl td:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
+.tr{text-align:right}
+
+/* 預算 */
+.budget-grid{display:grid;gap:10px}
+@media (min-width:560px){ .budget-grid{grid-template-columns:repeat(2,1fr)} }
+.bud-row{
+  display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:center
+}
+.bud-row .label{display:flex;align-items:center;gap:8px}
+.bud-row input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--chip-bg);color:var(--text)}
+.progress{
+  height:8px;border-radius:999px;background:#122126;overflow:hidden
+}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,#18c0d2,#0e9dae);width:0%}
+
+@media (max-width:360px){
   #rec-amt.amt{font-size:18px}
   .date-wrap input[type="date"]{font-size:16px}
-  .chip.lg{font-size:16px}
+  .chip.lg,#chip-scope .chip{font-size:16px}
 }
 
 /* 可用性 */
