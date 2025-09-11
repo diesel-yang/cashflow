@@ -5,7 +5,7 @@
   <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css?v=4027" />
+  <link rel="stylesheet" href="style.css?v=4030" />
 </head>
 <body>
 
@@ -39,10 +39,10 @@
           <input id="rec-amt" type="number" inputmode="decimal"
                  class="amt elevated center" placeholder="金額" aria-label="金額" />
 
-          <!-- 日期：隱形 input（觸發原生選擇器） + 可視卡片 -->
+          <!-- 日期：透明 input 覆蓋整塊 + 可視顯示層（年後換行） -->
           <div class="date-wrap">
-            <input id="rec-date" type="date" class="visually-hidden-date" aria-label="日期" />
-            <button type="button" id="rec-date-display" class="date-card elevated" aria-live="polite"></button>
+            <div class="date-display elevated" id="rec-date-display" aria-hidden="true"></div>
+            <input id="rec-date" type="date" class="date-input-overlay" aria-label="日期" />
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@
     </section>
   </main>
 
-  <footer class="foot">極速記帳 · v4.02</footer>
+  <footer class="foot">極速記帳 · v4.03</footer>
 
   <!-- 小豬（口袋）SVG symbol -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -118,8 +118,9 @@
     </symbol>
   </svg>
 
+  <!-- Firebase（Compat 版） -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="app.js?v=4027"></script>
+  <script src="app.js?v=4030"></script>
 </body>
 </html>
