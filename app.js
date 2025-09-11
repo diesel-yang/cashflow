@@ -213,30 +213,47 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* ===== 本月紀錄（對應 .indexOn: ["date"]）+ 餘額 ===== */
-function watchMonthAndBalances(){
-  const list = byId('recent-list'); if(!list) return;
-  const [s,e] = monthRangeStr(new Date());
-  const refRec = db.ref(`rooms/${state.space}/records`)
-    .orderByChild('date').startAt(s).endAt(e);
-  refRec.on('value', snap=>{
-    const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
-    state.cacheRecords = arr.slice(); // 報表/預算共用
-    // 本月清單
-    const rows = arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
-    list.innerHTML = rows.map(r=>{
-      const sign = r.io==='expense'?'-':'+';
-      const d = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
-      return `<div class="row">
-        <div class="r-date">${d}</div>
-        <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group||''}${r.item? '・'+r.item:''}</div>
-        <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
-      </div>`;
-    }).join('') || `<div class="muted">（本月尚無紀錄）</div>`;
-    // 餘額（仍以全部 arr 加總，這裡就以本月資料推算可接受；若要全量可另拉全表）
-    updatePocketAmountsFromRecords(arr);
-    // 更新報表與預算
-    refreshReport(); refreshBudgetProgress();
+// 本月日期範圍（YYYY-MM-DD）
+function monthRangeISO(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const first = `${y}-${m}-01`;
+  const lastDate = new Date(y, d.getMonth() + 1, 0).getDate();
+  const last = `${y}-${m}-${String(lastDate).padStart(2, '0')}`;
+  return { first, last };
+}
+
+// 只抓本月紀錄（用 .indexOn:["date"]）
+function watchMonthlyRecordsAndBalances() {
+  if (!state.space) return;
+  const { first, last } = monthRangeISO(new Date());
+
+  const recRef = firebase.database().ref(`rooms/${state.space}/records`);
+  const q = recRef.orderByChild('date').startAt(first).endAt(last);
+
+  recRef.off(); // 先解除舊監聽，避免重複
+  q.on('value', (snap) => {
+    const list = byId('recent-list');
+    const all = [];
+    snap.forEach((ch) => all.push(ch.val()));
+
+    // 本月清單（已經是本月了，直接輸出）
+    list.innerHTML =
+      all
+        .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+        .map((r) => {
+          const sign = r.io === 'expense' ? '-' : '+';
+          const d = r.date || new Date(r.ts).toLocaleDateString('zh-TW');
+          return `<div class="row">
+            <div class="r-date">${d}</div>
+            <div>${r.scope === 'restaurant' ? '餐廳' : '個人'}・${r.group || ''}${r.item ? '・' + r.item : ''}</div>
+            <div class="r-amt ${r.io === 'expense' ? 'neg' : 'pos'}">${sign}${money(r.amount || r.amt)}</div>
+          </div>`;
+        })
+        .join('') || `<div class="muted">（本月尚無紀錄）</div>`;
+
+    // 口袋即時餘額（仍用「全部紀錄」更準，若你只要本月，這裡可改成 all）
+    updatePocketAmountsFromRecords(all);
   });
 }
 
