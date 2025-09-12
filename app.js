@@ -113,19 +113,55 @@ function setActivePocket(key){
     el.setAttribute('aria-pressed', on?'true':'false');
   });
 }
+
+/* === 預支 + 餘額計算，並更新 UI（在結餘下方顯示負號紅字） === */
 function updatePocketAmountsFromRecords(records){
   const bal={restaurant:0,jack:0,wal:0};
+  const advance={jack:0, wal:0}; // 個人為餐廳墊付的「預支」
+
   for(const r of records){
-    const delta=(r.io==='income'?1:-1)*(Number(r.amount||r.amt)||0);
-    if (r.pocket && bal[r.pocket] != null) bal[r.pocket]+=delta;
+    const amt = Number(r.amount ?? r.amt) || 0;
+    const sign = (r.io === 'income') ? 1 : -1;
+
+    // 口袋結餘（不分 scope）
+    if (r.pocket && bal[r.pocket] != null) bal[r.pocket] += sign * amt;
+
+    // 預支（個人口袋為餐廳支出時累積）
+    if (r.scope === 'restaurant' && r.io === 'expense' && (r.pocket === 'jack' || r.pocket === 'wal')){
+      advance[r.pocket] += amt;
+    }
   }
+
   for(const p of POCKETS){
     const el=byId(`amt-${p.key}`); if(!el) continue;
     const v = bal[p.key]||0;
     el.textContent = (v||0).toLocaleString('zh-TW');
+
     const card = el.closest('.pocket');
     card.classList.toggle('negative', v<0);
     card.classList.toggle('positive', v>0);
+
+    // 在結餘「下方」顯示預支（僅 Jack/Wal；以負號紅字顯示）
+    let advEl = card.querySelector('.advance');
+    if(!advEl){
+      advEl = document.createElement('div');
+      advEl.className = 'advance';
+      card.appendChild(advEl);
+    }
+    if(p.key==='jack' || p.key==='wal'){
+      const adv = advance[p.key] || 0;
+      if(adv>0){
+        advEl.textContent = `-${money(adv)}`;
+        advEl.style.display='block';
+      }else{
+        advEl.textContent = '';
+        advEl.style.display='none';
+      }
+    }else{
+      // 餐廳口袋不顯示預支
+      advEl.textContent = '';
+      advEl.style.display='none';
+    }
   }
 }
 
@@ -175,24 +211,36 @@ function renderItems(){
   };
 }
 
-/* 新增項目 */
-byId('btn-add-cat')?.addEventListener('click', addItemToCatalog);
-async function addItemToCatalog(){
-  const input=byId('new-cat-name'); if(!input) return;
-  const name=(input.value||'').trim(); if(!name){alert('請輸入名稱');return;}
-  if(!state.space||!state.group){alert('請先連線並選類別');return;}
-  const base=db.ref(`rooms/${state.space}/catalog`);
-  const s=await base.get();
-  let cat=s.exists()?s.val():[];
-  if(!Array.isArray(cat)){
-    cat=[].concat(cat.categories?.restaurant||[],cat.categories?.personal||[],cat.categories||[]);
-  }
-  let icon='',label=name; 
-  const m=name.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.+)$/u);
-  if(m){icon=m[1];label=m[2].trim();}
-  cat.push({id:label,label,kind:state.group,icon});
-  await base.set(cat);
-  state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
+/* ===== 本月清單：容忍只有 ts 的資料也能顯示 ===== */
+function sameMonth(ts, d=new Date()){
+  const x = new Date(ts);
+  return x.getFullYear()===d.getFullYear() && x.getMonth()===d.getMonth();
+}
+function renderRecentListFrom(arr){
+  const list = byId('recent-list'); if(!list) return;
+  const d = new Date();
+  const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+
+  const rows = arr
+    .filter(r=>{
+      const hasDate = typeof r.date === 'string' && r.date.length>=7;
+      if (hasDate && r.date.startsWith(ym)) return true;
+      const ts = Number(r.ts)||0;
+      return ts ? sameMonth(ts, d) : false;
+    })
+    .sort((a,b)=> (Number(b.ts||0))-(Number(a.ts||0)));
+
+  list.innerHTML = rows.map(r=>{
+    const sign = r.io==='expense'?'-':'+';
+    const dstr = (typeof r.date==='string' && r.date.slice(0,10)) 
+                  || (r.ts ? new Date(r.ts).toISOString().slice(0,10) : todayISO());
+    const amtNum = Number(r.amount ?? r.amt) || 0;
+    return `<div class="row">
+      <div class="r-date">${dstr}</div>
+      <div>${r.scope==='personal'?'個人':'餐廳'}・${normalizeKind(r.group)||''}${r.item? '・'+r.item:''}</div>
+      <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(amtNum)}</div>
+    </div>`;
+  }).join('') || `<div class="muted">（本月無紀錄）</div>`;
 }
 
 /* 觀察紀錄 + 餘額 + 圖表 */
@@ -206,32 +254,25 @@ function watchRecentAndBalances(){
     const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
     state.allRecords = arr;
 
-    // 只顯示本月
-    const d=new Date(); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const rows = arr.filter(r=>(r.date||'').startsWith(ym)).sort((a,b)=> (b.ts||0)-(a.ts||0));
-    list.innerHTML = rows.map(r=>{
-      const sign = r.io==='expense'?'-':'+';
-      const dstr = (r.date||'').slice(0,10) || new Date(r.ts).toISOString().slice(0,10);
-      return `<div class="row">
-        <div class="r-date">${dstr}</div>
-        <div>${r.scope==='restaurant'?'餐廳':'個人'}・${r.group||''}${r.item? '・'+r.item:''}</div>
-        <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
-      </div>`;
-    }).join('') || `<div class="muted">（本月無紀錄）</div>`;
-
-    updatePocketAmountsFromRecords(arr);
+    renderRecentListFrom(state.allRecords);
+    updatePocketAmountsFromRecords(state.allRecords);
     renderCharts(); // 每次資料更新時重繪圖表
   });
 }
 
 /* ====== 圖表：餐廳 P&L / 個人圓餅 ====== */
 function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
-function monthFilter(recs){const ym=getMonthKey();return recs.filter(r=>(r.date||'').startsWith(ym));}
-
+function monthFilter(recs){
+  const ym=getMonthKey();
+  return recs.filter(r=>{
+    if ((r.date||'').startsWith(ym)) return true;
+    const ts = Number(r.ts)||0;
+    return ts ? sameMonth(ts) : false;
+  });
+}
 function sumBy(recs, pred){
   return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);
 }
-
 function renderCharts(){
   const mRecs = monthFilter(state.allRecords);
 
@@ -320,7 +361,16 @@ async function onSubmit(){
   );
   await room.update(updates);
 
-  byId('rec-amt').value=''; byId('rec-note').value='';
+  // === 樂觀更新：立刻在前端反映（無需等待 RTDB 事件回來） ===
+  state.allRecords = [{ ...rec }, ...state.allRecords];
+  renderRecentListFrom(state.allRecords);
+  updatePocketAmountsFromRecords(state.allRecords);
+  renderCharts();
+
+  // 清空輸入 & 同步日期卡片
+  byId('rec-amt').value=''; 
+  byId('rec-note').value='';
+  syncDateDisplay();
 }
 
 /* Tabs / IO / Scope */
