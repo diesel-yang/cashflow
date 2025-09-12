@@ -1,4 +1,4 @@
-// v4.04.1a：修正 closest(...) 右括號打錯；口袋小豬自動縮放維持不變
+// v4.04.2：小豬自動縮放 + 日期卡片覆蓋 input + 連線 debug
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
@@ -100,7 +100,7 @@ function renderPockets(){
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
   host.onclick=e=>{
-    const btn=e.target.closest('[data-pocket]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-pocket]'); if(!btn) return;
     setActivePocket(btn.dataset.pocket);
   };
 }
@@ -138,7 +138,7 @@ function renderPayers(){
     </button>`).join('');
   state.payer = 'J';
   row.onclick=e=>{
-    const btn=e.target.closest('[data-payer]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-payer]'); if(!btn) return;
     $$('#payers-row .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.payer=btn.dataset.payer;
   };
@@ -154,7 +154,7 @@ function renderGroups(){
   }).join('');
   state.group='';
   box.onclick=e=>{
-    const btn=e.target.closest('[data-group]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-group]'); if(!btn) return;
     $$('#group-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.group=btn.dataset.group; state.item=''; renderItems();
   };
@@ -168,7 +168,7 @@ function renderItems(){
     return `<button class="chip" data-item="${it.label}">${icon}<span class="label">${it.label}</span></button>`;
   }).join('')||`<div class="muted">（暫無項目，可下方建立）</div>`;
   box.onclick=e=>{
-    const btn=e.target.closest('[data-item]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-item]'); if(!btn) return;
     $$('#items-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.item=btn.dataset.item;
   };
@@ -303,7 +303,7 @@ function bindTabs(){
 function bindIOChips(){
   const group = byId('chip-io'); if(!group) return;
   group.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-io]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-io]'); if(!btn) return;
     $$('#chip-io .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     state.io = btn.dataset.io; 
@@ -313,7 +313,7 @@ function bindIOChips(){
 function bindScopeChips(){
   const group = byId('chip-scope'); if(!group) return;
   group.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-scope]'); if(!btn) return;   // ← 修正
+    const btn=e.target.closest('[data-scope]'); if(!btn) return;
     $$('#chip-scope .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     state.scope = btn.dataset.scope; 
@@ -341,6 +341,7 @@ const btnConnect = byId('btn-connect');
 function doConnect(){
   const input = byId('space-code');
   const code = (input?.value||'').trim();
+  console.log("doConnect", code);   // debug：桌機上檢查是否有觸發
   if(!code){ alert('請輸入共享代號'); return; }
   state.space = code;
   ensureRoom()
