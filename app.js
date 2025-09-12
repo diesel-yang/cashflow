@@ -114,56 +114,74 @@ function setActivePocket(key){
   });
 }
 
-/* === 預支 + 餘額計算，並更新 UI（在結餘下方顯示負號紅字） === */
+/* === 預支 / 墊支 + 餘額計算，並更新 UI（有「預支」才在結餘下方顯示負號紅字） === */
 function updatePocketAmountsFromRecords(records){
-  const bal={restaurant:0,jack:0,wal:0};
-  const advance={jack:0, wal:0}; // 個人為餐廳墊付的「預支」
+  const bal = { restaurant:0, jack:0, wal:0 };
+  const advanceFromRestaurant = { jack:0, wal:0 }; // 餐廳替個人付個人費用 → 之後從薪資扣（個人「預支」）
+  const prepayByPerson        = { jack:0, wal:0 }; // 個人替餐廳付餐廳費用 → 之後加回薪資（個人「墊支」）
 
-  for(const r of records){
-    const amt = Number(r.amount ?? r.amt) || 0;
+  for (const r of records){
+    const amt  = Number(r.amount ?? r.amt) || 0;
     const sign = (r.io === 'income') ? 1 : -1;
 
-    // 口袋結餘（不分 scope）
+    // 口袋結餘
     if (r.pocket && bal[r.pocket] != null) bal[r.pocket] += sign * amt;
 
-    // 預支（個人口袋為餐廳支出時累積）
-    if (r.scope === 'restaurant' && r.io === 'expense' && (r.pocket === 'jack' || r.pocket === 'wal')){
-      advance[r.pocket] += amt;
+    // 個人墊支：個人口袋支付餐廳支出（之後 + 回薪資）
+    if (r.io==='expense' && r.scope==='restaurant' && (r.pocket==='jack' || r.pocket==='wal')){
+      prepayByPerson[r.pocket] += amt;
+    }
+
+    // 個人預支：餐廳口袋支付個人支出（之後 − 自薪資）
+    if (r.io==='expense' && r.scope==='personal' && r.pocket==='restaurant'){
+      if (r.payer === 'J')      advanceFromRestaurant.jack += amt;
+      else if (r.payer === 'W') advanceFromRestaurant.wal  += amt;
+      else if (r.payer === 'JW'){
+        advanceFromRestaurant.jack += amt/2;
+        advanceFromRestaurant.wal  += amt/2;
+      }
     }
   }
 
-  for(const p of POCKETS){
-    const el=byId(`amt-${p.key}`); if(!el) continue;
-    const v = bal[p.key]||0;
-    el.textContent = (v||0).toLocaleString('zh-TW');
+  // 更新 UI（只在 Jack/Wal 顯示「預支」紅字，餐廳不顯示）
+  for (const p of POCKETS){
+    const el = byId(`amt-${p.key}`); if (!el) continue;
+    const v  = bal[p.key] || 0;
+    el.textContent = v.toLocaleString('zh-TW');
 
     const card = el.closest('.pocket');
-    card.classList.toggle('negative', v<0);
-    card.classList.toggle('positive', v>0);
+    card.classList.toggle('negative', v < 0);
+    card.classList.toggle('positive', v > 0);
 
-    // 在結餘「下方」顯示預支（僅 Jack/Wal；以負號紅字顯示）
     let advEl = card.querySelector('.advance');
-    if(!advEl){
+    if (!advEl){
       advEl = document.createElement('div');
       advEl.className = 'advance';
       card.appendChild(advEl);
     }
-    if(p.key==='jack' || p.key==='wal'){
-      const adv = advance[p.key] || 0;
-      if(adv>0){
-        advEl.textContent = `-${money(adv)}`;
-        advEl.style.display='block';
+
+    if (p.key === 'jack' || p.key === 'wal'){
+      const adv = advanceFromRestaurant[p.key] || 0;
+      if (adv > 0){
+        // 需求：在結餘金額下方顯示「負號紅字」
+        advEl.textContent = `-${adv.toLocaleString('zh-TW')}`;
+        advEl.style.display = 'block';
       }else{
         advEl.textContent = '';
-        advEl.style.display='none';
+        advEl.style.display = 'none';
       }
     }else{
       // 餐廳口袋不顯示預支
       advEl.textContent = '';
-      advEl.style.display='none';
+      advEl.style.display = 'none';
     }
   }
+
+  // ⬇︎ 如需做「結算」頁：可用下述兩個彙總：
+  //   Jack/Wal：實領 = 應領 + prepayByPerson[name] - advanceFromRestaurant[name]
+  // 目前先不顯示，只保留計算結果於此函式局部變數（之後可抽出成全域或回傳）。
 }
+
 
 /* Payers */
 function renderPayers(){
