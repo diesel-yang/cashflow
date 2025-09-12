@@ -1,8 +1,8 @@
-// v4.04.2：小豬自動縮放 + 日期卡片覆蓋 input + 連線 debug
+// v4.04.3：修正 databaseURL（firebaseio.com）+ 小修維持
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
-  databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL: "https://cashflow-71391-default-rtdb.firebaseio.com", // ← 修正
   projectId: "cashflow-71391",
   storageBucket: "cashflow-71391.appspot.com",
   messagingSenderId: "204834375477",
@@ -87,13 +87,13 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* 付款口袋 */
+/* 付款口袋（小豬 = 卡片本體） */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
     <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
-      <svg class="pig" viewBox="0 0 167 139" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#pig-icon"></use></svg>
+      <svg class="pig" aria-hidden="true"><use href="#pig-icon"></use></svg>
       <div class="badge" id="amt-${p.key}">0</div>
       <div class="name">${p.name}</div>
     </button>`).join('');
@@ -154,7 +154,7 @@ function renderGroups(){
   }).join('');
   state.group='';
   box.onclick=e=>{
-    const btn=e.target.closest('[data-group]'); if(!btn) return;
+    const btn=e.target.closest('[data-group]']); if(!btn) return;
     $$('#group-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.group=btn.dataset.group; state.item=''; renderItems();
   };
@@ -202,7 +202,7 @@ function watchRecentAndBalances(){
   });
 }
 
-/* 圖表：餐廳 P&L / 個人圓餅 */
+/* 圖表 */
 function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthFilter(recs){const ym=getMonthKey();return recs.filter(r=>(r.date||'').startsWith(ym));}
 function sumBy(recs, pred){return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);}
@@ -258,73 +258,66 @@ function renderCharts(){
   }
 }
 
-/* 送出 */
+/* 建立/補項目 */
+byId('btn-add-cat')?.addEventListener('click', addItemToCatalog);
+async function addItemToCatalog(){
+  const input=byId('new-cat-name'); if(!input) return;
+  const name=(input.value||'').trim(); if(!name){alert('請輸入名稱');return;}
+  if(!state.space||!state.group){alert('請先連線並選類別');return;}
+  const base=db.ref(`rooms/${state.space}/catalog`);
+  const s=await base.get();
+  let cat=s.exists()?s.val():[];
+  if(!Array.isArray(cat)){
+    cat=[].concat(cat.categories?.restaurant||[],cat.categories?.personal||[],cat.categories||[]);
+  }
+  let icon='',label=name; 
+  const m=name.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.+)$/u);
+  if(m){icon=m[1];label=m[2].trim();}
+  cat.push({id:label,label,kind:state.group,icon});
+  await base.set(cat);
+  state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
+}
+
+/* 送出（set + transaction，更穩且易偵錯） */
 byId('btn-submit')?.addEventListener('click', onSubmit);
 async function onSubmit(){
   if(!state.space) { alert('請先連線'); return; }
 
-  // ☆ 解析金額：允許全形小數點、千分位，並避免空字串
   const raw = (byId('rec-amt')?.value ?? '').toString();
   const amtRaw = raw.replace(/[^\d\.\-]/g,'').replace('．','.');
   const amt = Number(amtRaw);
-  if(!Number.isFinite(amt) || amt === 0){
-    alert('請輸入金額（不可為 0）');
-    return;
-  }
+  if(!Number.isFinite(amt) || amt === 0){ alert('請輸入金額（不可為 0）'); return; }
+  if(!state.pocket || !state.payer){ alert('請選口袋與付款人/收款人'); return; }
 
-  if(!state.pocket || !state.payer){
-    alert('請選口袋與付款人/收款人');
-    return;
-  }
-
-  // 若有新項目名稱，先補 catalog
   const newName = (byId('new-cat-name')?.value||'').trim();
   if(newName && state.group){ await addItemToCatalog(); }
 
-  const dateStr = byId('rec-date')?.value || todayISO();
-  const ts = Date.parse(dateStr) || Date.now();
-  const note = byId('rec-note')?.value || '';
+  const dateStr=byId('rec-date')?.value||todayISO(); 
+  const ts = Date.parse(dateStr)||Date.now();
+  const note=byId('rec-note')?.value||'';
+  const rec={ ts, date:dateStr, amount:amt, io:state.io, scope:state.scope,
+              group:state.group, item:state.item, payer:state.payer, pocket:state.pocket, note };
 
-  const rec = {
-    ts, date: dateStr,
-    amount: amt,
-    io: state.io,
-    scope: state.scope,
-    group: state.group,
-    item: state.item,
-    payer: state.payer,
-    pocket: state.pocket,
-    note
-  };
-
-  // ☆ 送出前印 log（桌機/手機都能看到）
   console.log('submit rec =>', rec);
 
   try{
     const room = db.ref(`rooms/${state.space}`);
     const id = room.child('records').push().key;
 
-    // ☆ 分開兩次寫入：先寫 records，再安全更新 balances
     await room.child(`records/${id}`).set(rec);
-
     await room.child(`balances/${state.pocket}`).transaction(cur=>{
       const base = Number(cur)||0;
       const delta = (state.io==='income'?1:-1) * amt;
       return base + delta;
     });
 
-    // 清空輸入
-    byId('rec-amt').value='';
-    byId('rec-note').value='';
-    byId('new-cat-name').value='';
-
+    byId('rec-amt').value=''; byId('rec-note').value=''; byId('new-cat-name').value='';
     console.log('submit done:', id);
   }catch(err){
     console.error('submit error:', err);
     alert('寫入失敗：' + (err?.message || err));
   }
 }
-
 
 /* Tabs / IO / Scope */
 function bindTabs(){
@@ -380,7 +373,7 @@ const btnConnect = byId('btn-connect');
 function doConnect(){
   const input = byId('space-code');
   const code = (input?.value||'').trim();
-  console.log("doConnect", code);   // debug：桌機上檢查是否有觸發
+  console.log("doConnect", code);
   if(!code){ alert('請輸入共享代號'); return; }
   state.space = code;
   ensureRoom()
