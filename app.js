@@ -124,7 +124,7 @@ function updatePocketAmountsFromRecords(records){
     const amt  = Number(r.amount ?? r.amt) || 0;
     const sign = (r.io === 'income') ? 1 : -1;
 
-    // 口袋結餘
+    // 口袋結餘（不分 scope）
     if (r.pocket && bal[r.pocket] != null) bal[r.pocket] += sign * amt;
 
     // 個人墊支：個人口袋支付餐廳支出（之後 + 回薪資）
@@ -132,7 +132,7 @@ function updatePocketAmountsFromRecords(records){
       prepayByPerson[r.pocket] += amt;
     }
 
-    // 個人預支：餐廳口袋支付個人支出（之後 − 自薪資）
+    // 個人預支：餐廳口袋支付個人支出（之後 − 自薪資）；JW 平分
     if (r.io==='expense' && r.scope==='personal' && r.pocket==='restaurant'){
       if (r.payer === 'J')      advanceFromRestaurant.jack += amt;
       else if (r.payer === 'W') advanceFromRestaurant.wal  += amt;
@@ -171,17 +171,14 @@ function updatePocketAmountsFromRecords(records){
         advEl.style.display = 'none';
       }
     }else{
-      // 餐廳口袋不顯示預支
       advEl.textContent = '';
       advEl.style.display = 'none';
     }
   }
 
-  // ⬇︎ 如需做「結算」頁：可用下述兩個彙總：
-  //   Jack/Wal：實領 = 應領 + prepayByPerson[name] - advanceFromRestaurant[name]
-  // 目前先不顯示，只保留計算結果於此函式局部變數（之後可抽出成全域或回傳）。
+  // ⬇︎ 供「月結」使用（目前不顯示）：
+  // 実領薪資 = 應領薪資 + prepayByPerson[name] - advanceFromRestaurant[name]
 }
-
 
 /* Payers */
 function renderPayers(){
@@ -229,7 +226,7 @@ function renderItems(){
   };
 }
 
-/* ===== 本月清單：容忍只有 ts 的資料也能顯示 ===== */
+/* ===== 本月清單：容忍只有 ts 的資料也能顯示；若本月為空則回退最近 50 筆 ===== */
 function sameMonth(ts, d=new Date()){
   const x = new Date(ts);
   return x.getFullYear()===d.getFullYear() && x.getMonth()===d.getMonth();
@@ -239,14 +236,16 @@ function renderRecentListFrom(arr){
   const d = new Date();
   const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 
-  const rows = arr
-    .filter(r=>{
-      const hasDate = typeof r.date === 'string' && r.date.length>=7;
-      if (hasDate && r.date.startsWith(ym)) return true;
-      const ts = Number(r.ts)||0;
-      return ts ? sameMonth(ts, d) : false;
-    })
-    .sort((a,b)=> (Number(b.ts||0))-(Number(a.ts||0)));
+  const inThisMonth = arr.filter(r=>{
+    const hasDate = typeof r.date === 'string' && r.date.length>=7;
+    if (hasDate && r.date.startsWith(ym)) return true;
+    const ts = Number(r.ts)||0;
+    return ts ? sameMonth(ts, d) : false;
+  });
+
+  const rows = (inThisMonth.length ? inThisMonth : arr)
+    .sort((a,b)=> (Number(b.ts||0))-(Number(a.ts||0)))
+    .slice(0, 50);
 
   list.innerHTML = rows.map(r=>{
     const sign = r.io==='expense'?'-':'+';
@@ -258,7 +257,7 @@ function renderRecentListFrom(arr){
       <div>${r.scope==='personal'?'個人':'餐廳'}・${normalizeKind(r.group)||''}${r.item? '・'+r.item:''}</div>
       <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(amtNum)}</div>
     </div>`;
-  }).join('') || `<div class="muted">（本月無紀錄）</div>`;
+  }).join('') || `<div class="muted">（目前無紀錄）</div>`;
 }
 
 /* 觀察紀錄 + 餘額 + 圖表 */
@@ -281,11 +280,12 @@ function watchRecentAndBalances(){
 /* ====== 圖表：餐廳 P&L / 個人圓餅 ====== */
 function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthFilter(recs){
-  const ym=getMonthKey();
+  const d=new Date();
+  const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   return recs.filter(r=>{
     if ((r.date||'').startsWith(ym)) return true;
     const ts = Number(r.ts)||0;
-    return ts ? sameMonth(ts) : false;
+    return ts ? sameMonth(ts, d) : false;
   });
 }
 function sumBy(recs, pred){
