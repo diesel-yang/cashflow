@@ -1,115 +1,170 @@
-/* v4.04.3：小豬完整顯示 + 既有修正保留 */
+/* ==========================================================================
+   極速記帳 - v4.04.3
+   ========================================================================== */
 :root{
   --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
   --primary:#12b4c4; --border:#203033; --chip-bg:#0f1719; --chip-active:#0f2f35;
   --pos:#76e3a8; --neg:#ff9aa0;
 }
 *{box-sizing:border-box}
-html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC","Segoe UI",Roboto,Arial}
+html,body{
+  margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC","Segoe UI",Roboto,Arial;
+}
 main{padding-bottom:40px}
 
 /* Cards */
-.card{background:var(--card); border:1px solid var(--border); border-radius:16px;
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
   padding:12px; display:grid; gap:12px; box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
-  margin:8px clamp(8px,2.4vw,16px)}
-.section-head{font-size:clamp(14px,3.5vw,15px); font-weight:800; letter-spacing:.04em}
+  margin:8px 12px;
+}
+.section-head{font-size:15px; font-weight:800; letter-spacing:.04em}
 .center{display:grid;place-items:center}
 .muted{color:var(--muted)}
 
-/* Head */
-.head .head-row{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; min-width:0}
+/* 頂部 */
+.head .head-row{
+  display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; min-width:0;
+}
 .tabs{display:flex; gap:8px; flex-wrap:wrap}
-.tab{border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
-  padding:9px 13px; border-radius:999px; cursor:pointer; font-size:clamp(13px,3.6vw,14px)}
+.tab{
+  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
+  padding:9px 13px; border-radius:999px; cursor:pointer;
+}
 .tab.active{background:var(--chip-active); border-color:var(--primary); font-weight:800}
 
 /* Inputs / Buttons */
-.input{width:100%; background:var(--chip-bg); color:var(--text);
-  border:1px solid var(--border); border-radius:12px; padding:12px 14px; font-size:clamp(14px,4vw,16px)}
+.input{
+  width:100%; background:var(--chip-bg); color:var(--text);
+  border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+}
 .btn{background:var(--primary); color:#001114; border:none; border-radius:12px; padding:12px 14px; font-weight:800; cursor:pointer}
 .btn.danger{background:#dc3545; color:#fff}
 .btn.success{background:#2ac3a2; color:#001114}
 
 /* Chips */
-.chip{border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
-  border-radius:12px; padding:10px 12px; min-height:44px; cursor:pointer;
-  display:inline-flex; align-items:center; justify-content:center; gap:8px; font-size:clamp(14px,3.8vw,16px)}
-.chip.active{background:var(--chip-active); border-color:var(--primary);
-  box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent)}
-.chip.lg{font-size:clamp(15px,4.4vw,18px)}
+.chip{
+  border:1px solid var(--border); background:var(--chip-bg); color:var(--text);
+  border-radius:12px; padding:10px 12px; min-height:48px;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+}
+.chip.active{
+  background:var(--chip-active);
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.chip.lg{font-size:18px}
 
-/* 三欄：收支｜金額｜日期 */
-.top-eqgrid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px; align-items:center; min-width:0}
-.top-eqgrid>*{min-width:0}
-.chip-group.two{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-width:0}
+/* ===== 三欄（支出/收入｜金額｜日期）不跳行 ===== */
+.top-eqgrid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px; align-items:center;
+  min-width:0; /* 防 Grid 被子元素撐爆（Safari）*/
+}
+/* 兩顆 chip 等分該欄寬 */
+.chip-group.two{
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; min-width:0;
+}
+/* 金額輸入：深色主題白字，大小一致 */
+#rec-amt.amt{
+  text-align:center; font-weight:900; font-size:20px;
+  color:var(--text)!important; -webkit-text-fill-color:var(--text)!important; caret-color:var(--text);
+}
+.elevated{
+  border-radius:12px; border:1px solid var(--border);
+  background:linear-gradient(#0e1619,#0b1215); color:var(--text); padding:12px 14px;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25);
+}
 
-/* 金額 */
-#rec-amt.amt{text-align:center; font-weight:900; font-size:clamp(18px,6vw,22px);
-  color:var(--text)!important; -webkit-text-fill-color:var(--text)!important; caret-color:var(--text)}
-.elevated{border-radius:12px; border:1px solid var(--border);
-  background:linear-gradient(#0e1619,#0b1215); color:var(--text); padding:12px 12px;
-  box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 8px 22px rgba(0,0,0,.25)}
+/* 日期顯示層（原生日曆疊在上：點得到、看不到） */
+.date-wrap{ position:relative; min-width:0; }
+.date-display{
+  width:100%; text-align:center; font-weight:900; font-size:18px;
+  line-height:1.15; white-space:pre-line; /* ← 顯示 \n 為換行（補強 #1） */
+}
+.date-input-overlay{
+  position:absolute; inset:0; opacity:0; /* 隱形但可點（開原生日曆） */
+  -webkit-appearance:none; appearance:none; border:none; background:transparent; cursor:pointer;
+}
 
-/* 日期：透明 input 覆蓋整塊 + 顯示層（年後換行） */
-.date-wrap{position:relative; min-width:0}
-.date-display{width:100%; text-align:center; font-weight:800; font-size:clamp(12px,3.8vw,16px);
-  white-space:pre; line-height:1.15; padding:12px 0}
-.date-input-overlay{position:absolute; inset:0; width:100%; height:100%;
-  opacity:0; -webkit-appearance:none; appearance:none; cursor:pointer; background:transparent; border:none}
+/* 送出：立體 */
+.btn-3d{
+  appearance:none; width:100%;
+  border:1px solid #1c2a2e; border-radius:14px; padding:14px 18px;
+  font-weight:900; letter-spacing:.08em; text-align:center; cursor:pointer;
+  background:linear-gradient(#0e1619,#0b1215); color:#e8f7fa;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 10px 24px rgba(0,0,0,.35),0 0 0 2px rgba(18,180,196,.20);
+  transition:transform .06s ease,box-shadow .15s ease,filter .15s ease;
+}
+.btn-3d.primary{background:linear-gradient(#13bfd0,#109fb0); border-color:#0f8f9b; color:#001114}
+.btn-3d:hover{filter:brightness(1.03)}
+.btn-3d:active{transform:translateY(1px); box-shadow:0 6px 16px rgba(0,0,0,.28),0 0 0 2px rgba(18,180,196,.25)}
+.btn-3d:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
 
 /* Grids */
 .grid{display:grid; gap:10px}
-.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.grid.tight{gap:8px}
-#payers-row .chip{width:100%; padding:clamp(8px,2.6vw,12px); font-size:clamp(14px,3.4vw,16px)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.pockets-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
 
-/* 口袋（小豬完整自適應） */
-.pockets-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end}
+/* 口袋（小豬即卡片；金額內嵌到小豬身上） */
 .pocket{
-  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px;
-  background:transparent; border:none; padding:0; cursor:pointer;
-  aspect-ratio:167/139;                 /* 讓外框比例與豬一致，避免裁邊 */
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  border:1px solid var(--border); background:var(--card); border-radius:16px; padding:12px;
+  min-height:170px; cursor:pointer;
+  transition:box-shadow .15s, border-color .15s;
 }
-.pocket .pig{
-  width:100%; height:auto; display:block; overflow:visible; /* 關鍵：不裁切描邊 */
-  color:#6aa7ff;
+.pocket .pig{ width:120px; height:120px; color:#6aa7ff; }
+.pocket .pig use{ pointer-events:none }
+.pocket .name{ font-size:15px; color:var(--muted); }
+.pocket .badge{ /* 內嵌金額 */
+  position:absolute; top:48%; left:50%; transform:translate(-50%,-50%);
+  font-size:20px; font-weight:900; color:var(--text); padding:.15em .5em;
+  background:#0b1215; border:1px solid #1c2a2e; border-radius:10px;
+  pointer-events:none;
 }
-.pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px}
-.pocket .badge{
-  position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
-  font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .5em;
-  background:#0b1215; border:1px solid #1c2a2e; border-radius:10px; pointer-events:none
-}
-.pocket .pig path{fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
-.pocket.active .pig{color:var(--primary)}
-.pocket.negative .pig{color:#ff6b6b}
-.pocket.negative .badge{color:var(--neg)}
-.pocket.positive .badge{color:var(--pos)}
+.pocket.active{ border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent) }
+.pocket.negative .pig{ color:#ff6b6b }
+.pocket.negative .badge{ color:var(--neg) }
+.pocket.positive .badge{ color:var(--pos) }
+/* 讓 SVG 受色彩控制並在高亮時更明顯 */
+.pocket .pig path{ fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round }
 
 /* 最近列表 */
 .list{display:grid; gap:8px}
-.list .row{display:grid; grid-template-columns:95px 1fr auto; gap:8px; align-items:center;
-  padding:10px; background:var(--chip-bg); border:1px solid var(--border); border-radius:12px; color:var(--text)}
+.list .row{
+  display:grid; grid-template-columns:95px 1fr auto; gap:8px; align-items:center;
+  padding:10px; background:var(--chip-bg); border:1px solid var(--border); border-radius:12px; color:var(--text)
+}
 .list .r-date{color:var(--muted)}
 .list .r-amt{font-weight:900}
 .list .r-amt.pos{color:var(--pos)}
 .list .r-amt.neg{color:var(--neg)}
 
-/* 圖表 */
-.chart-box{height:320px}
-@media (max-width:380px){.chart-box{height:280px}}
-.pl-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
-.pl-grid .pl{padding:10px; border:1px solid var(--border); border-radius:12px; background:var(--chip-bg)}
-.pl .k{color:var(--muted); font-size:14px}
-.pl .v{font-weight:900; font-size:18px}
-.pl .pos{color:var(--pos)} .pl .neg{color:var(--neg)}
+/* 圖表容器 */
+.chart-wrap{ position:relative; height:280px; }
+
+/* P&L 版面 */
+.pl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pl{ display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center; }
+.pl .k{ color:var(--muted) }
+.pl .v{ font-weight:900; justify-self:end }
+.pl .v.pos{ color:var(--pos) }
+.pl .v.neg{ color:var(--neg) }
+
+/* 小螢幕微縮字，不改欄數 */
+@media (max-width:360px){
+  #rec-amt.amt{font-size:18px}
+  .date-display{font-size:16px}
+  .chip.lg{font-size:16px}
+}
 
 /* 分頁顯示 */
-.page{display:none !important}
-.page.show{display:block !important}
+.page{display:none}
+.page.show{display:block}
 
 /* 可用性 */
 :where(button,.chip,.pocket,input):focus-visible{outline:2px solid var(--primary); outline-offset:2px}
