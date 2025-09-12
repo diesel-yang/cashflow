@@ -112,6 +112,8 @@ main{padding-bottom:40px}
   aspect-ratio:167/139;                 /* 與 viewBox 一致 */
   display:block; color:#6aa7ff;
 }
+.pocket .pig { overflow: visible; }
+
 .pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px}
 .pocket .badge{
   position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
