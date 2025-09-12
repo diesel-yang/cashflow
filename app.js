@@ -1,11 +1,11 @@
-// v4.03 必要修正（4030）：日期卡片=原生日期、SVG小豬自適應、storageBucket 修正
+// v4.04（4040）：日期卡片、口袋比例、營收/收支圖表
 /* Firebase（Compat） */
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
   databaseURL: "https://cashflow-71391-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "cashflow-71391",
-  storageBucket: "cashflow-71391.appspot.com",   // ← 修正成 appspot.com，桌機才能正常
+  storageBucket: "cashflow-71391.appspot.com",
   messagingSenderId: "204834375477",
   appId: "1:204834375477:web:406dde0ccb0d33a60d2e7c",
   measurementId: "G-G2DVG798M8"
@@ -30,7 +30,8 @@ const state = {
   payer: "J",
   pocket: "restaurant",
   catalog: [],
-  catalogIndex: null
+  catalogIndex: null,
+  allRecords: []
 };
 
 /* Groups / Icons */
@@ -87,7 +88,7 @@ async function ensureCatalog(){
   renderGroups(); renderItems();
 }
 
-/* 付款口袋（小豬=卡片主體、金額內嵌） */
+/* 付款口袋 */
 const POCKETS=[{key:'restaurant',name:'餐廳'},{key:'jack',name:'Jack'},{key:'wal',name:'Wal'}];
 function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
@@ -128,7 +129,7 @@ function updatePocketAmountsFromRecords(records){
   }
 }
 
-/* Payers (J / W / JW) */
+/* Payers */
 function renderPayers(){
   const row=byId('payers-row'); if(!row) return;
   const data = [{key:'J',label:'J',icon:'👤'},{key:'W',label:'W',icon:'👤'},{key:'JW',label:'JW',icon:'👥'}];
@@ -194,12 +195,17 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* 本月紀錄 + 餘額 */
+/* 觀察紀錄 + 餘額 + 圖表 */
+const COLOR_PALETTE = ["#12b4c4","#ff9aa0","#76e3a8","#f6c344","#9b6ef3","#f37ec7","#3eb489","#ffa600","#00a6ed","#ff6b6b"];
+let bizBarChart=null, personalPieChart=null;
+
 function watchRecentAndBalances(){
   const list = byId('recent-list'); if(!list) return;
   const refRec = db.ref(`rooms/${state.space}/records`);
   refRec.on('value', snap=>{
     const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
+    state.allRecords = arr;
+
     // 只顯示本月
     const d=new Date(); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const rows = arr.filter(r=>(r.date||'').startsWith(ym)).sort((a,b)=> (b.ts||0)-(a.ts||0));
@@ -212,8 +218,71 @@ function watchRecentAndBalances(){
         <div class="r-amt ${r.io==='expense'?'neg':'pos'}">${sign}${money(r.amount||r.amt)}</div>
       </div>`;
     }).join('') || `<div class="muted">（本月無紀錄）</div>`;
+
     updatePocketAmountsFromRecords(arr);
+    renderCharts(); // 每次資料更新時重繪圖表
   });
+}
+
+/* ====== 圖表：餐廳 P&L / 個人圓餅 ====== */
+function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function monthFilter(recs){const ym=getMonthKey();return recs.filter(r=>(r.date||'').startsWith(ym));}
+
+function sumBy(recs, pred){
+  return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);
+}
+
+function renderCharts(){
+  const mRecs = monthFilter(state.allRecords);
+
+  // --- 餐廳 P&L ---
+  const rest = mRecs.filter(r=>r.scope==='restaurant');
+  const revenue = sumBy(rest, r=> r.io==='income' && (r.group||r.item)==='營業收入');
+  const cogs    = sumBy(rest, r=> r.io==='expense' && normalizeKind(r.group)==='銷貨成本');
+  const expenseGroups = ['人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
+  const expenseSums = expenseGroups.map(g=> sumBy(rest, r=> r.io==='expense' && normalizeKind(r.group)===g));
+  const gp = revenue - cogs;
+  const opex = expenseSums.reduce((a,b)=>a+b,0);
+  const op = gp - opex;
+  const gpm = revenue? (gp/revenue*100):0;
+
+  // 數字板
+  const pl = byId('pl-numbers');
+  if(pl){
+    pl.innerHTML = `
+      <div class="pl"><div class="k">營業收入</div><div class="v">${money(revenue)}</div></div>
+      <div class="pl"><div class="k">銷貨成本</div><div class="v neg">-${money(cogs)}</div></div>
+      <div class="pl"><div class="k">毛利</div><div class="v ${gp>=0?'pos':'neg'}">${gp>=0?'+':''}${money(gp)}</div></div>
+      <div class="pl"><div class="k">毛利率</div><div class="v">${gpm.toFixed(1)}%</div></div>
+      <div class="pl"><div class="k">營業費用</div><div class="v neg">-${money(opex)}</div></div>
+      <div class="pl"><div class="k">營業利益</div><div class="v ${op>=0?'pos':'neg'}">${op>=0?'+':''}${money(op)}</div></div>
+    `;
+  }
+
+  // 長條：餐廳費用群組
+  const barCtx = byId('biz-bar');
+  if(barCtx && window.Chart){
+    bizBarChart?.destroy();
+    bizBarChart = new Chart(barCtx, {
+      type:'bar',
+      data:{labels:expenseGroups, datasets:[{label:'金額', data:expenseSums, backgroundColor: COLOR_PALETTE.slice(0,expenseGroups.length)}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>money(v)}}}}
+    });
+  }
+
+  // --- 個人圓餅 ---
+  const personal = mRecs.filter(r=>r.scope==='personal' && r.io==='expense');
+  const persGroups = PERS_EXPENSE_GROUPS;
+  const persSums = persGroups.map(g=> sumBy(personal, r=> normalizeKind(r.group)===g));
+  const pieCtx = byId('personal-pie');
+  if(pieCtx && window.Chart){
+    personalPieChart?.destroy();
+    personalPieChart = new Chart(pieCtx, {
+      type:'pie',
+      data:{labels:persGroups, datasets:[{data:persSums, backgroundColor: COLOR_PALETTE}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'left'}}}
+    });
+  }
 }
 
 /* 送出 */
@@ -263,6 +332,8 @@ function bindTabs(){
       $$('.page').forEach(p=>p.classList.remove('show'));
       const id = tab.getAttribute('data-target');
       byId(id)?.classList.add('show');
+      // 分頁切換時也重繪，避免容器大小變動
+      setTimeout(renderCharts, 0);
     });
   });
 }
@@ -290,9 +361,7 @@ function bindScopeChips(){
 
 /* ===== 日期顯示層（年後換行） ===== */
 function formatDateMultiline(str){
-  // str: YYYY-MM-DD
-  const [y,m,d]=str.split('-');
-  if(!y||!m||!d) return '';
+  const [y,m,d]=str.split('-'); if(!y||!m||!d) return '';
   return `${y}\n年${Number(m)}月${Number(d)}日`;
 }
 function syncDateDisplay(){
@@ -304,7 +373,7 @@ function syncDateDisplay(){
 byId('rec-date')?.addEventListener('input', syncDateDisplay);
 byId('rec-date')?.addEventListener('change', syncDateDisplay);
 
-/* 連線（桌機/手機一致） */
+/* 連線 */
 const btnConnect = byId('btn-connect');
 function doConnect(){
   const input = byId('space-code');
@@ -353,4 +422,6 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
   }
 
   bindTabs(); bindIOChips(); bindScopeChips();
+  // 視窗改變時，圖表自動調整
+  window.addEventListener('resize', ()=>{ setTimeout(renderCharts, 0); });
 })();
