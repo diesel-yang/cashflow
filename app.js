@@ -1,5 +1,4 @@
-// v4.04（4040）：日期卡片、口袋比例、營收/收支圖表
-/* Firebase（Compat） */
+// v4.04.1（4041）：口袋小豬自動縮放；其餘沿用 4.04
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
@@ -101,7 +100,7 @@ function renderPockets(){
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
   host.onclick=e=>{
-    const btn=e.target.closest('[data-pocket]'); if(!btn) return;
+    const btn=e.target.closest('[data-pocket]']); if(!btn) return;
     setActivePocket(btn.dataset.pocket);
   };
 }
@@ -139,7 +138,7 @@ function renderPayers(){
     </button>`).join('');
   state.payer = 'J';
   row.onclick=e=>{
-    const btn=e.target.closest('[data-payer]'); if(!btn) return;
+    const btn=e.target.closest('[data-payer]']); if(!btn) return;
     $$('#payers-row .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.payer=btn.dataset.payer;
   };
@@ -155,7 +154,7 @@ function renderGroups(){
   }).join('');
   state.group='';
   box.onclick=e=>{
-    const btn=e.target.closest('[data-group]'); if(!btn) return;
+    const btn=e.target.closest('[data-group]']); if(!btn) return;
     $$('#group-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.group=btn.dataset.group; state.item=''; renderItems();
   };
@@ -169,30 +168,10 @@ function renderItems(){
     return `<button class="chip" data-item="${it.label}">${icon}<span class="label">${it.label}</span></button>`;
   }).join('')||`<div class="muted">（暫無項目，可下方建立）</div>`;
   box.onclick=e=>{
-    const btn=e.target.closest('[data-item]'); if(!btn) return;
+    const btn=e.target.closest('[data-item]']); if(!btn) return;
     $$('#items-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.item=btn.dataset.item;
   };
-}
-
-/* 新增項目 */
-byId('btn-add-cat')?.addEventListener('click', addItemToCatalog);
-async function addItemToCatalog(){
-  const input=byId('new-cat-name'); if(!input) return;
-  const name=(input.value||'').trim(); if(!name){alert('請輸入名稱');return;}
-  if(!state.space||!state.group){alert('請先連線並選類別');return;}
-  const base=db.ref(`rooms/${state.space}/catalog`);
-  const s=await base.get();
-  let cat=s.exists()?s.val():[];
-  if(!Array.isArray(cat)){
-    cat=[].concat(cat.categories?.restaurant||[],cat.categories?.personal||[],cat.categories||[]);
-  }
-  let icon='',label=name; 
-  const m=name.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.+)$/u);
-  if(m){icon=m[1];label=m[2].trim();}
-  cat.push({id:label,label,kind:state.group,icon});
-  await base.set(cat);
-  state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
 /* 觀察紀錄 + 餘額 + 圖表 */
@@ -206,7 +185,6 @@ function watchRecentAndBalances(){
     const arr=[]; snap.forEach(ch=>arr.push(ch.val()));
     state.allRecords = arr;
 
-    // 只顯示本月
     const d=new Date(); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const rows = arr.filter(r=>(r.date||'').startsWith(ym)).sort((a,b)=> (b.ts||0)-(a.ts||0));
     list.innerHTML = rows.map(r=>{
@@ -220,22 +198,19 @@ function watchRecentAndBalances(){
     }).join('') || `<div class="muted">（本月無紀錄）</div>`;
 
     updatePocketAmountsFromRecords(arr);
-    renderCharts(); // 每次資料更新時重繪圖表
+    renderCharts();
   });
 }
 
-/* ====== 圖表：餐廳 P&L / 個人圓餅 ====== */
+/* 圖表：餐廳 P&L / 個人圓餅 */
 function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthFilter(recs){const ym=getMonthKey();return recs.filter(r=>(r.date||'').startsWith(ym));}
-
-function sumBy(recs, pred){
-  return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);
-}
+function sumBy(recs, pred){return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);}
 
 function renderCharts(){
   const mRecs = monthFilter(state.allRecords);
 
-  // --- 餐廳 P&L ---
+  // 餐廳 P&L
   const rest = mRecs.filter(r=>r.scope==='restaurant');
   const revenue = sumBy(rest, r=> r.io==='income' && (r.group||r.item)==='營業收入');
   const cogs    = sumBy(rest, r=> r.io==='expense' && normalizeKind(r.group)==='銷貨成本');
@@ -246,7 +221,6 @@ function renderCharts(){
   const op = gp - opex;
   const gpm = revenue? (gp/revenue*100):0;
 
-  // 數字板
   const pl = byId('pl-numbers');
   if(pl){
     pl.innerHTML = `
@@ -259,7 +233,6 @@ function renderCharts(){
     `;
   }
 
-  // 長條：餐廳費用群組
   const barCtx = byId('biz-bar');
   if(barCtx && window.Chart){
     bizBarChart?.destroy();
@@ -270,7 +243,7 @@ function renderCharts(){
     });
   }
 
-  // --- 個人圓餅 ---
+  // 個人圓餅
   const personal = mRecs.filter(r=>r.scope==='personal' && r.io==='expense');
   const persGroups = PERS_EXPENSE_GROUPS;
   const persSums = persGroups.map(g=> sumBy(personal, r=> normalizeKind(r.group)===g));
@@ -300,17 +273,8 @@ async function onSubmit(){
   const dateStr=byId('rec-date')?.value||todayISO(); 
   const ts = Date.parse(dateStr)||Date.now();
   const note=byId('rec-note')?.value||'';
-  const rec={
-    ts, date:dateStr,
-    amount:amt,
-    io:state.io,
-    scope:state.scope,
-    group:state.group,
-    item:state.item,
-    payer:state.payer,
-    pocket:state.pocket,
-    note
-  };
+  const rec={ts, date:dateStr, amount:amt, io:state.io, scope:state.scope, group:state.group,
+             item:state.item, payer:state.payer, pocket:state.pocket, note};
   const room = db.ref(`rooms/${state.space}`);
   const id = room.child('records').push().key;
   const updates = {};
@@ -332,7 +296,6 @@ function bindTabs(){
       $$('.page').forEach(p=>p.classList.remove('show'));
       const id = tab.getAttribute('data-target');
       byId(id)?.classList.add('show');
-      // 分頁切換時也重繪，避免容器大小變動
       setTimeout(renderCharts, 0);
     });
   });
@@ -340,7 +303,7 @@ function bindTabs(){
 function bindIOChips(){
   const group = byId('chip-io'); if(!group) return;
   group.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-io]'); if(!btn) return;
+    const btn=e.target.closest('[data-io]']); if(!btn) return;
     $$('#chip-io .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     state.io = btn.dataset.io; 
@@ -350,7 +313,7 @@ function bindIOChips(){
 function bindScopeChips(){
   const group = byId('chip-scope'); if(!group) return;
   group.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-scope]'); if(!btn) return;
+    const btn=e.target.closest('[data-scope]']); if(!btn) return;
     $$('#chip-scope .chip').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     state.scope = btn.dataset.scope; 
@@ -359,7 +322,7 @@ function bindScopeChips(){
   });
 }
 
-/* ===== 日期顯示層（年後換行） ===== */
+/* 日期顯示層（年後換行） */
 function formatDateMultiline(str){
   const [y,m,d]=str.split('-'); if(!y||!m||!d) return '';
   return `${y}\n年${Number(m)}月${Number(d)}日`;
@@ -400,12 +363,10 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
 
 /* Boot */
 (function boot(){
-  // 日期預設今天 + 顯示
   const dateInput = byId('rec-date');
   if (dateInput && !dateInput.value) dateInput.value = todayISO();
   syncDateDisplay();
 
-  // 還原空間
   if(state.space){
     byId('space-code').value = state.space;
     ensureRoom().then(ensureCatalog).then(()=>{
@@ -422,6 +383,5 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
   }
 
   bindTabs(); bindIOChips(); bindScopeChips();
-  // 視窗改變時，圖表自動調整
   window.addEventListener('resize', ()=>{ setTimeout(renderCharts, 0); });
 })();
