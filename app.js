@@ -100,7 +100,7 @@ function renderPockets(){
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
   host.onclick=e=>{
-    const btn=e.target.closest('[data-pocket]'); if(!btn) return;
+    const btn=e.target.closest('[data-pocket]'); if(!bt return;
     setActivePocket(btn.dataset.pocket);
   };
 }
@@ -154,7 +154,7 @@ function renderGroups(){
   }).join('');
   state.group='';
   box.onclick=e=>{
-    const btn=e.target.closest('[data-group]']); if(!btn) return;
+    const btn=e.target.closest('[data-group]'); if(!btn) return;
     $$('#group-grid .active').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active'); state.group=btn.dataset.group; state.item=''; renderItems();
   };
