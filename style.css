@@ -75,23 +75,39 @@ main{padding-bottom:40px}
 .grid.tight{gap:8px}
 #payers-row .chip{width:100%; padding:clamp(8px,2.6vw,12px); font-size:clamp(14px,3.4vw,16px)}
 
-/* ===== 口袋卡片（小豬 100% 自適應，不裁切） ===== */
+/* ===== 口袋卡片（與 chip 一樣的高亮；小豬置中等比；金額覆蓋） ===== */
 .pockets-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+
 .pocket{
-  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px;
-  background:transparent; border:none; padding:0; cursor:pointer;
-  aspect-ratio:167/139;   /* ← 與 SVG viewBox 一致 */
-  overflow:visible;
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; background:var(--chip-bg); border:1px solid var(--border); border-radius:14px;
+  cursor:pointer; padding:10px; aspect-ratio:1/1; /* 正方形卡片 */
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
 }
-.pocket .pig{width:100%; height:100%; display:block; aspect-ratio:167/139; color:#6aa7ff}
-.pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px}
+.pocket .pig{
+  width:100%; max-width:260px; height:auto; display:block;
+  aspect-ratio:167/139; color:#6aa7ff; margin:0 auto;
+}
+.pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:4px; text-align:center}
+
 /* 顯示結餘金額（置中覆蓋在小豬身上） */
 .pocket .badge{
   position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
   max-width:90%; text-align:center; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
-  font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .5em;
-  background:#0b1215; border:1px solid #1c2a2e; border-radius:10px; pointer-events:none
+  font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .6em;
+  background:#0b1215; border:1px solid #1c2a2e; border-radius:10px; pointer-events:none;
 }
+.pocket .pig path{fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+
+/* 高亮：與 .chip 一致（主色外框 + 光暈） */
+.pocket.active{
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent), 0 0 0 1px rgba(255,255,255,.03) inset;
+}
+.pocket.negative .pig{color:#ff6b6b}
+.pocket.negative .badge{color:var(--neg)}
+.pocket.positive .badge{color:var(--pos)}
+
 /* 預支（顯示在結餘「下方」；有預支才出現；負號紅字） */
 .pocket .advance{
   margin-top:4px;
@@ -99,11 +115,6 @@ main{padding-bottom:40px}
   font-weight:800;
   color:var(--neg);
 }
-.pocket .pig path{fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
-.pocket.active .pig{color:var(--primary)}
-.pocket.negative .pig{color:#ff6b6b}
-.pocket.negative .badge{color:var(--neg)}
-.pocket.positive .badge{color:var(--pos)}
 
 /* 最近列表 */
 .list{display:grid; gap:8px}
