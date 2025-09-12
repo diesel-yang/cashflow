@@ -261,31 +261,70 @@ function renderCharts(){
 /* 送出 */
 byId('btn-submit')?.addEventListener('click', onSubmit);
 async function onSubmit(){
-  if(!state.space) return alert('請先連線');
-  const amtRaw = (byId('rec-amt')?.value||'').replace(/[^\d.-]/g,'');
-  const amt = Number(amtRaw)||0;
-  if(!amt) return alert('請輸入金額');
-  if(!state.pocket || !state.payer) return alert('請選口袋與付款人/收款人');
+  if(!state.space) { alert('請先連線'); return; }
 
+  // ☆ 解析金額：允許全形小數點、千分位，並避免空字串
+  const raw = (byId('rec-amt')?.value ?? '').toString();
+  const amtRaw = raw.replace(/[^\d\.\-]/g,'').replace('．','.');
+  const amt = Number(amtRaw);
+  if(!Number.isFinite(amt) || amt === 0){
+    alert('請輸入金額（不可為 0）');
+    return;
+  }
+
+  if(!state.pocket || !state.payer){
+    alert('請選口袋與付款人/收款人');
+    return;
+  }
+
+  // 若有新項目名稱，先補 catalog
   const newName = (byId('new-cat-name')?.value||'').trim();
   if(newName && state.group){ await addItemToCatalog(); }
 
-  const dateStr=byId('rec-date')?.value||todayISO(); 
-  const ts = Date.parse(dateStr)||Date.now();
-  const note=byId('rec-note')?.value||'';
-  const rec={ts, date:dateStr, amount:amt, io:state.io, scope:state.scope, group:state.group,
-             item:state.item, payer:state.payer, pocket:state.pocket, note};
-  const room = db.ref(`rooms/${state.space}`);
-  const id = room.child('records').push().key;
-  const updates = {};
-  updates[`records/${id}`] = rec;
-  updates[`balances/${state.pocket}`] = firebase.database.ServerValue.increment(
-    (state.io==='income'?1:-1) * amt
-  );
-  await room.update(updates);
+  const dateStr = byId('rec-date')?.value || todayISO();
+  const ts = Date.parse(dateStr) || Date.now();
+  const note = byId('rec-note')?.value || '';
 
-  byId('rec-amt').value=''; byId('rec-note').value='';
+  const rec = {
+    ts, date: dateStr,
+    amount: amt,
+    io: state.io,
+    scope: state.scope,
+    group: state.group,
+    item: state.item,
+    payer: state.payer,
+    pocket: state.pocket,
+    note
+  };
+
+  // ☆ 送出前印 log（桌機/手機都能看到）
+  console.log('submit rec =>', rec);
+
+  try{
+    const room = db.ref(`rooms/${state.space}`);
+    const id = room.child('records').push().key;
+
+    // ☆ 分開兩次寫入：先寫 records，再安全更新 balances
+    await room.child(`records/${id}`).set(rec);
+
+    await room.child(`balances/${state.pocket}`).transaction(cur=>{
+      const base = Number(cur)||0;
+      const delta = (state.io==='income'?1:-1) * amt;
+      return base + delta;
+    });
+
+    // 清空輸入
+    byId('rec-amt').value='';
+    byId('rec-note').value='';
+    byId('new-cat-name').value='';
+
+    console.log('submit done:', id);
+  }catch(err){
+    console.error('submit error:', err);
+    alert('寫入失敗：' + (err?.message || err));
+  }
 }
+
 
 /* Tabs / IO / Scope */
 function bindTabs(){
