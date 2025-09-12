@@ -5,7 +5,7 @@
   <title>極速記帳</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css?v=4030" />
+  <link rel="stylesheet" href="style.css?v=4040" />
 </head>
 <body>
 
@@ -90,13 +90,24 @@
       </div>
     </section>
 
-    <!-- 其它分頁保留骨架 -->
+    <!-- 營收頁（餐廳 P&L + 群組長條） -->
     <section id="page-biz" class="page" role="tabpanel">
-      <div class="card center muted">（餐廳報表在此頁）</div>
+      <div class="card">
+        <div class="section-head">餐廳 P&L（本月）</div>
+        <div id="pl-numbers" class="pl-grid"></div>
+      </div>
+      <div class="card">
+        <div class="section-head">餐廳費用分佈（本月）</div>
+        <div class="chart-box"><canvas id="biz-bar"></canvas></div>
+      </div>
     </section>
 
+    <!-- 收支頁（個人圓餅） -->
     <section id="page-personal" class="page" role="tabpanel">
-      <div class="card center muted">（個人收支報表在此頁）</div>
+      <div class="card">
+        <div class="section-head">個人支出分佈（本月）</div>
+        <div class="chart-box"><canvas id="personal-pie"></canvas></div>
+      </div>
     </section>
 
     <section id="page-budget" class="page" role="tabpanel">
@@ -108,7 +119,7 @@
     </section>
   </main>
 
-  <footer class="foot">極速記帳 · v4.03</footer>
+  <footer class="foot">極速記帳 · v4.04</footer>
 
   <!-- 小豬（口袋）SVG symbol -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -118,9 +129,12 @@
     </symbol>
   </svg>
 
+  <!-- 第三方：Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
   <!-- Firebase（Compat 版） -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="app.js?v=4030"></script>
+  <script src="app.js?v=4040"></script>
 </body>
 </html>
