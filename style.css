@@ -1,22 +1,18 @@
-/* v4.04（4040）：圖表回歸、日期卡片、口袋比例修正 */
+/* v4.04.1（4041）：口袋小豬自動縮放修正 */
 :root{
   --bg:#0a0f11; --card:#10191c; --text:#f3fbfd; --muted:#a8c0c7;
   --primary:#12b4c4; --border:#203033; --chip-bg:#0f1719; --chip-active:#0f2f35;
   --pos:#76e3a8; --neg:#ff9aa0;
 }
 *{box-sizing:border-box}
-html,body{
-  margin:0; padding:0; background:var(--bg); color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC","Segoe UI",Roboto,Arial;
-}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,Inter,"Noto Sans TC","Segoe UI",Roboto,Arial}
 main{padding-bottom:40px}
 
 /* Cards */
-.card{
-  background:var(--card); border:1px solid var(--border); border-radius:16px;
+.card{background:var(--card); border:1px solid var(--border); border-radius:16px;
   padding:12px; display:grid; gap:12px; box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
-  margin:8px clamp(8px,2.4vw,16px);
-}
+  margin:8px clamp(8px,2.4vw,16px)}
 .section-head{font-size:clamp(14px,3.5vw,15px); font-weight:800; letter-spacing:.04em}
 .center{display:grid;place-items:center}
 .muted{color:var(--muted)}
@@ -75,15 +71,18 @@ main{padding-bottom:40px}
 .grid.tight{gap:8px}
 #payers-row .chip{width:100%; padding:clamp(8px,2.6vw,12px); font-size:clamp(14px,3.4vw,16px)}
 
-/* ===== 口袋卡片（小豬 100% 自適應，不裁切） ===== */
-.pockets-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+/* ===== 口袋卡片（小豬 100% 自適應） ===== */
+.pockets-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end}
 .pocket{
   position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px;
   background:transparent; border:none; padding:0; cursor:pointer;
-  aspect-ratio:167/139;   /* ← 與 SVG viewBox 一致 */
-  overflow:visible;
+  /* 不設定 aspect-ratio，讓內部 SVG 依寬度自動決定高度 */
 }
-.pocket .pig{width:100%; height:100%; display:block; aspect-ratio:167/139; color:#6aa7ff}
+.pocket .pig{
+  width:100%; height:auto; display:block;
+  aspect-ratio:167/139;            /* 保持與 viewBox 一致 */
+  color:#6aa7ff;
+}
 .pocket .name{font-size:clamp(13px,3.6vw,15px); color:var(--muted); margin-top:6px}
 .pocket .badge{position:absolute; top:44%; left:50%; transform:translate(-50%,-50%);
   font-size:clamp(16px,4.8vw,20px); font-weight:900; color:var(--text); padding:.15em .5em;
