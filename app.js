@@ -1,8 +1,8 @@
-// v4.04.3：修正 databaseURL（firebaseio.com）+ 小修維持
+// v4.04.3：修正 databaseURL（firebaseio.com）+ bugfix + 顯示層補強
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
-  databaseURL: "https://cashflow-71391-default-rtdb.firebaseio.com", // ← 修正
+  databaseURL: "https://cashflow-71391-default-rtdb.firebaseio.com",
   projectId: "cashflow-71391",
   storageBucket: "cashflow-71391.appspot.com",
   messagingSenderId: "204834375477",
@@ -93,14 +93,16 @@ function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
     <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
-      <svg class="pig" aria-hidden="true"><use href="#pig-icon"></use></svg>
+      <!-- 補上 viewBox 以確保完整比例顯示（補強 #2） -->
+      <svg class="pig" viewBox="0 0 167 139" aria-hidden="true"><use href="#pig-icon"></use></svg>
       <div class="badge" id="amt-${p.key}">0</div>
       <div class="name">${p.name}</div>
     </button>`).join('');
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
-  host.onclick=e=>{
-    const btn=e.target.closest('[data-pocket]'); if(!bt return;
+  host.onclick = (e) => {
+    const btn = e.target.closest('[data-pocket]');
+    if (!btn) return;
     setActivePocket(btn.dataset.pocket);
   };
 }
@@ -278,7 +280,7 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* 送出（set + transaction，更穩且易偵錯） */
+/* 送出（set + transaction） */
 byId('btn-submit')?.addEventListener('click', onSubmit);
 async function onSubmit(){
   if(!state.space) { alert('請先連線'); return; }
