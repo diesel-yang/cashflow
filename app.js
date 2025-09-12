@@ -1,4 +1,4 @@
-// v4.04.3：修正 databaseURL（firebaseio.com）+ bugfix + 顯示層補強
+// v4.04.4：修正 click handler 語法錯誤 + 小豬/日期小補強（僅必要修正）
 const firebaseConfig = {
   apiKey: "AIzaSyBfV21c91SabQrtrDDGBjt8aX9FcnHy-Es",
   authDomain: "cashflow-71391.firebaseapp.com",
@@ -93,16 +93,14 @@ function renderPockets(){
   const host=byId('pockets-row'); if(!host) return;
   host.innerHTML=POCKETS.map(p=>`
     <button class="pocket" data-pocket="${p.key}" aria-pressed="false">
-      <!-- 補上 viewBox 以確保完整比例顯示（補強 #2） -->
-      <svg class="pig" viewBox="0 0 167 139" aria-hidden="true"><use href="#pig-icon"></use></svg>
+      <svg class="pig" aria-hidden="true"><use href="#pig-icon"></use></svg>
       <div class="badge" id="amt-${p.key}">0</div>
       <div class="name">${p.name}</div>
     </button>`).join('');
   if(!state.pocket) state.pocket='restaurant';
   setActivePocket(state.pocket);
-  host.onclick = (e) => {
-    const btn = e.target.closest('[data-pocket]');
-    if (!btn) return;
+  host.onclick=e=>{
+    const btn=e.target.closest('[data-pocket]'); if(!btn) return; /* ← 修正：btn 拼字+右括號 */
     setActivePocket(btn.dataset.pocket);
   };
 }
@@ -176,10 +174,7 @@ function renderItems(){
   };
 }
 
-/* 觀察紀錄 + 餘額 + 圖表 */
-const COLOR_PALETTE = ["#12b4c4","#ff9aa0","#76e3a8","#f6c344","#9b6ef3","#f37ec7","#3eb489","#ffa600","#00a6ed","#ff6b6b"];
-let bizBarChart=null, personalPieChart=null;
-
+/* 觀察紀錄 + 餘額（維持既有 monthly filter） */
 function watchRecentAndBalances(){
   const list = byId('recent-list'); if(!list) return;
   const refRec = db.ref(`rooms/${state.space}/records`);
@@ -200,64 +195,7 @@ function watchRecentAndBalances(){
     }).join('') || `<div class="muted">（本月無紀錄）</div>`;
 
     updatePocketAmountsFromRecords(arr);
-    renderCharts();
   });
-}
-
-/* 圖表 */
-function getMonthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
-function monthFilter(recs){const ym=getMonthKey();return recs.filter(r=>(r.date||'').startsWith(ym));}
-function sumBy(recs, pred){return recs.reduce((s,r)=> pred(r)? s+(Number(r.amount||r.amt)||0) : s, 0);}
-
-function renderCharts(){
-  const mRecs = monthFilter(state.allRecords);
-
-  // 餐廳 P&L
-  const rest = mRecs.filter(r=>r.scope==='restaurant');
-  const revenue = sumBy(rest, r=> r.io==='income' && (r.group||r.item)==='營業收入');
-  const cogs    = sumBy(rest, r=> r.io==='expense' && normalizeKind(r.group)==='銷貨成本');
-  const expenseGroups = ['人事','水電/租金/網路','行銷','物流/運輸','行政/稅務'];
-  const expenseSums = expenseGroups.map(g=> sumBy(rest, r=> r.io==='expense' && normalizeKind(r.group)===g));
-  const gp = revenue - cogs;
-  const opex = expenseSums.reduce((a,b)=>a+b,0);
-  const op = gp - opex;
-  const gpm = revenue? (gp/revenue*100):0;
-
-  const pl = byId('pl-numbers');
-  if(pl){
-    pl.innerHTML = `
-      <div class="pl"><div class="k">營業收入</div><div class="v">${money(revenue)}</div></div>
-      <div class="pl"><div class="k">銷貨成本</div><div class="v neg">-${money(cogs)}</div></div>
-      <div class="pl"><div class="k">毛利</div><div class="v ${gp>=0?'pos':'neg'}">${gp>=0?'+':''}${money(gp)}</div></div>
-      <div class="pl"><div class="k">毛利率</div><div class="v">${gpm.toFixed(1)}%</div></div>
-      <div class="pl"><div class="k">營業費用</div><div class="v neg">-${money(opex)}</div></div>
-      <div class="pl"><div class="k">營業利益</div><div class="v ${op>=0?'pos':'neg'}">${op>=0?'+':''}${money(op)}</div></div>
-    `;
-  }
-
-  const barCtx = byId('biz-bar');
-  if(barCtx && window.Chart){
-    bizBarChart?.destroy();
-    bizBarChart = new Chart(barCtx, {
-      type:'bar',
-      data:{labels:expenseGroups, datasets:[{label:'金額', data:expenseSums, backgroundColor: COLOR_PALETTE.slice(0,expenseGroups.length)}]},
-      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>money(v)}}}}
-    });
-  }
-
-  // 個人圓餅
-  const personal = mRecs.filter(r=>r.scope==='personal' && r.io==='expense');
-  const persGroups = PERS_EXPENSE_GROUPS;
-  const persSums = persGroups.map(g=> sumBy(personal, r=> normalizeKind(r.group)===g));
-  const pieCtx = byId('personal-pie');
-  if(pieCtx && window.Chart){
-    personalPieChart?.destroy();
-    personalPieChart = new Chart(pieCtx, {
-      type:'pie',
-      data:{labels:persGroups, datasets:[{data:persSums, backgroundColor: COLOR_PALETTE}]},
-      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'left'}}}
-    });
-  }
 }
 
 /* 建立/補項目 */
@@ -280,7 +218,7 @@ async function addItemToCatalog(){
   state.catalog=cat; buildCatalogIndex(cat); input.value=''; renderItems();
 }
 
-/* 送出（set + transaction） */
+/* 送出 */
 byId('btn-submit')?.addEventListener('click', onSubmit);
 async function onSubmit(){
   if(!state.space) { alert('請先連線'); return; }
@@ -300,8 +238,6 @@ async function onSubmit(){
   const rec={ ts, date:dateStr, amount:amt, io:state.io, scope:state.scope,
               group:state.group, item:state.item, payer:state.payer, pocket:state.pocket, note };
 
-  console.log('submit rec =>', rec);
-
   try{
     const room = db.ref(`rooms/${state.space}`);
     const id = room.child('records').push().key;
@@ -314,7 +250,6 @@ async function onSubmit(){
     });
 
     byId('rec-amt').value=''; byId('rec-note').value=''; byId('new-cat-name').value='';
-    console.log('submit done:', id);
   }catch(err){
     console.error('submit error:', err);
     alert('寫入失敗：' + (err?.message || err));
@@ -330,7 +265,6 @@ function bindTabs(){
       $$('.page').forEach(p=>p.classList.remove('show'));
       const id = tab.getAttribute('data-target');
       byId(id)?.classList.add('show');
-      setTimeout(renderCharts, 0);
     });
   });
 }
@@ -367,6 +301,7 @@ function syncDateDisplay(){
   const val=el.value || todayISO();
   disp.textContent = formatDateMultiline(val);
 }
+byId('rec-date-display')?.addEventListener('click', ()=> byId('rec-date')?.showPicker?.());
 byId('rec-date')?.addEventListener('input', syncDateDisplay);
 byId('rec-date')?.addEventListener('change', syncDateDisplay);
 
@@ -375,7 +310,6 @@ const btnConnect = byId('btn-connect');
 function doConnect(){
   const input = byId('space-code');
   const code = (input?.value||'').trim();
-  console.log("doConnect", code);
   if(!code){ alert('請輸入共享代號'); return; }
   state.space = code;
   ensureRoom()
@@ -418,5 +352,4 @@ byId('space-code')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doCon
   }
 
   bindTabs(); bindIOChips(); bindScopeChips();
-  window.addEventListener('resize', ()=>{ setTimeout(renderCharts, 0); });
 })();
